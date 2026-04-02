@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Premium 90 Bolas (En Línea)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        casino: {
+                            dark: '#0f172a',    
+                            panel: '#1e293b',   
+                            border: '#334155',
+                            gold: '#d97706',    
+                            goldLight: '#f59e0b',
+                        },
+                        card: {
+                            red: '#991b1b',     
+                            yellow: '#b45309',  
+                            green: '#065f46',   
+                            blue: '#1e3a8a',    
+                            bgEmpty: '#cbd5e1'  
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        serif: ['Georgia', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: theme('colors.casino.dark');
+            color: #f8fafc;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .bingo-ball {
+            background: radial-gradient(circle at 30% 30%, theme('colors.casino.goldLight'), theme('colors.casino.gold'), #78350f);
+            box-shadow: 
+                inset -10px -10px 20px rgba(0,0,0,0.5),
+                inset 10px 10px 20px rgba(255,255,255,0.4),
+                0 15px 35px rgba(0,0,0,0.5);
+            border: 4px solid #fcd34d;
+        }
+
+        .number-cell {
+            transition: all 0.3s ease;
+        }
+        .number-cell.active {
+            background-color: theme('colors.casino.gold');
+            color: white;
+            font-weight: bold;
+            border-color: theme('colors.casino.goldLight');
+            box-shadow: 0 0 10px theme('colors.casino.goldLight');
+            transform: scale(1.05);
+        }
+
+        .bingo-card {
+            page-break-inside: avoid;
+        }
+        .card-cell {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .card-cell.marked {
+            position: relative;
+        }
+        .card-cell.marked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background-color: currentColor;
+            opacity: 0.2;
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased overflow-hidden">
+
+    <!-- OVERLAY GLOBAL DE GANADOR (Se superpone a TODO y bloquea la pantalla) -->
+    <div id="globalWinnerOverlay" class="hidden fixed inset-0 bg-casino-dark/95 z-[100] flex-col items-center justify-start backdrop-blur-md px-4 text-center overflow-y-auto py-10">
+        <div class="animate-bounce mt-4 shrink-0">
+            <svg class="w-20 h-20 sm:w-32 sm:h-32 text-casino-gold mx-auto mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+        </div>
+        <h2 class="text-6xl sm:text-8xl md:text-9xl font-serif font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-casino-goldLight via-yellow-200 to-casino-gold drop-shadow-2xl mb-6 shrink-0">¡BINGO!</h2>
+        <p class="text-xl sm:text-3xl text-gray-300 font-light mb-6 shrink-0">El cartón ganador es:</p>
+        
+        <div id="globalWinnerCards" class="flex gap-8 flex-wrap justify-center w-full max-w-5xl pb-10">
+            <!-- Se inyecta la tarjeta ganadora aquí -->
+        </div>
+        
+        <button onclick="document.getElementById('globalWinnerOverlay').classList.add('hidden'); document.getElementById('globalWinnerOverlay').classList.remove('flex');" class="mt-4 px-6 py-3 bg-casino-panel border border-gray-600 rounded-lg text-white font-medium hover:bg-gray-700 transition-all shadow-lg shrink-0 mb-10">
+            Cerrar este aviso
+        </button>
+    </div>
+
+    <!-- PANTALLA DE SELECCIÓN DE MODO -->
+    <div id="selectionScreen" class="flex-grow flex items-center justify-center relative z-50 p-4">
+        <div class="bg-casino-panel border border-casino-gold rounded-2xl shadow-2xl p-6 sm:p-10 max-w-2xl w-full text-center">
+            <h1 class="text-3xl sm:text-4xl font-serif font-bold text-white mb-2">BINGO EN LÍNEA</h1>
+            <div class="h-1 w-20 bg-casino-gold mx-auto mb-2 rounded-full"></div>
+            
+            <div class="firebase-status inline-block px-3 py-1 bg-slate-800 border border-slate-600 rounded-full text-gray-400 text-xs font-bold mb-6 tracking-widest uppercase">
+                Conectando a Firebase...
+            </div>
+            
+            <p class="text-sm sm:text-base text-gray-400 mb-8">Comparte este enlace a tus jugadores o abre los paneles de control.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="window.openModeInNewWindow('public')" class="group relative px-4 py-4 bg-casino-dark border border-gray-600 rounded-xl hover:border-casino-gold hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all flex flex-col items-center justify-center">
+                    <svg class="w-8 h-8 sm:w-10 sm:h-10 text-casino-gold mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    <span class="text-sm sm:text-base font-semibold text-white text-center">Pantalla Público</span>
+                    <span class="text-xs text-gray-500 mt-1 text-center">Para proyector</span>
+                </button>
+
+                <button onclick="window.openModeInNewWindow('admin')" class="group relative px-4 py-4 bg-casino-dark border border-gray-600 rounded-xl hover:border-blue-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] transition-all flex flex-col items-center justify-center">
+                    <svg class="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="text-sm sm:text-base font-semibold text-white text-center">Panel de Control</span>
+                    <span class="text-xs text-gray-500 mt-1 text-center">Requiere contraseña</span>
+                </button>
+
+                <button onclick="window.openModeInNewWindow('cards')" class="group relative px-4 py-4 bg-casino-dark border border-gray-600 rounded-xl hover:border-emerald-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all flex flex-col items-center justify-center">
+                    <svg class="w-8 h-8 sm:w-10 sm:h-10 text-emerald-500 mb-2 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                    <span class="text-sm sm:text-base font-semibold text-white text-center">Cartones / Jugadores</span>
+                    <span class="text-xs text-gray-500 mt-1 text-center">Mandar este link</span>
+                </button>
+            </div>
+            
+            <div class="mt-8 text-xs text-gray-500">
+                Comparte este enlace a tus jugadores: <br>
+                <code class="text-blue-400 select-all" id="shareableLink">...</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA DEL PÚBLICO -->
+    <div id="publicScreen" class="hidden h-screen w-full flex-col items-center justify-between py-6 px-4 sm:py-8 sm:px-12 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); pointer-events: none;"></div>
+        
+        <header class="text-center w-full z-10">
+            <h1 class="text-4xl sm:text-6xl font-serif font-black tracking-[0.2em] sm:tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-casino-goldLight via-yellow-200 to-casino-gold drop-shadow-lg">BINGO</h1>
+        </header>
+
+        <main class="flex-grow flex items-center justify-center z-10 w-full my-4 sm:my-6">
+            <div id="publicMainBallContainer" class="hidden flex-col items-center">
+                <div class="text-lg sm:text-2xl text-gray-400 font-medium mb-2 sm:mb-4 uppercase tracking-widest text-center">Número Sorteado</div>
+                <div id="publicBall" class="bingo-ball w-48 h-48 sm:w-64 sm:h-64 rounded-full flex flex-col items-center justify-center">
+                    <div class="bg-white rounded-full w-32 h-32 sm:w-48 sm:h-48 flex flex-col items-center justify-center shadow-inner border border-gray-200 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white to-transparent opacity-80 rounded-t-full"></div>
+                        <span id="publicNumber" class="text-6xl sm:text-[8rem] leading-none font-black text-gray-900 z-10 mt-2 sm:mt-4"></span>
+                    </div>
+                </div>
+            </div>
+            <div id="publicWaitingMessage" class="block text-2xl sm:text-4xl font-light text-gray-500 tracking-wide text-center px-4">
+                Esperando el inicio del sorteo...
+            </div>
+        </main>
+
+        <!-- PANEL DE NÚMEROS SORTEADOS ESTILO "IMAGEN" (CIRCULOS OSCUROS) -->
+        <footer class="w-full max-w-6xl z-10 bg-casino-panel/80 backdrop-blur-md border border-casino-border p-6 sm:p-8 rounded-2xl shadow-2xl overflow-y-auto max-h-[45vh] no-scrollbar">
+            <h3 class="text-sm sm:text-xl font-bold text-gray-400 uppercase tracking-widest mb-4 sm:mb-6 text-left">Números Sorteados</h3>
+            <div id="publicDrawnBalls" class="flex flex-wrap gap-3 sm:gap-4 w-full justify-start">
+                <p class="text-sm sm:text-lg text-gray-500 italic">Esperando bolas...</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- PANEL DE CONTROL (ADMIN) -->
+    <div id="adminScreen" class="hidden h-screen w-full flex-col bg-casino-dark overflow-y-auto">
+        
+        <header class="bg-casino-panel border-b border-casino-border px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-center sticky top-0 z-50 shadow-md gap-4 sm:gap-0">
+            <div class="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-casino-gold flex items-center justify-center text-white font-serif font-bold text-lg sm:text-xl shadow-lg shrink-0">B</div>
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-white leading-tight">Panel de Control (Admin)</h2>
+                    <p class="firebase-status text-[10px] sm:text-xs text-gray-400 font-medium">● Sincronizando...</p>
+                </div>
+            </div>
+            <div class="flex w-full sm:w-auto justify-end">
+                <button onclick="window.resetGame()" class="px-3 py-2 sm:px-4 sm:py-2 border border-red-900 text-red-400 hover:bg-red-950 hover:text-red-300 rounded-lg text-xs sm:text-sm font-medium transition-colors w-full sm:w-auto">
+                    Reiniciar Partida
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-grow p-4 sm:p-6 flex flex-col lg:flex-row gap-6 sm:gap-8 max-w-7xl mx-auto w-full">
+            
+            <div class="w-full lg:w-1/3 flex flex-col gap-4 sm:gap-6">
+                
+                <div id="adminWinnerAlert" class="hidden w-full bg-gradient-to-r from-yellow-900 to-casino-gold border border-yellow-400 rounded-xl p-3 sm:p-4 shadow-2xl text-center animate-pulse">
+                    <h3 class="text-xl sm:text-2xl font-black text-white drop-shadow-md">¡TENEMOS BINGO!</h3>
+                    <p class="text-sm sm:text-base text-yellow-100 mt-1">Cartón(es): <span id="adminWinnerCardsText" class="font-bold text-lg sm:text-2xl"></span></p>
+                </div>
+
+                <div class="bg-casino-panel border border-casino-border rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col items-center">
+                    <div class="w-full text-center mb-4 sm:mb-6">
+                        <span class="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-widest">Último Número</span>
+                    </div>
+                    
+                    <div id="adminMainBallContainer" class="hidden flex-col items-center mb-6 sm:mb-8 w-full">
+                        <div id="adminBall" class="bingo-ball w-32 h-32 sm:w-48 sm:h-48 rounded-full flex flex-col items-center justify-center">
+                            <div class="bg-white rounded-full w-20 h-20 sm:w-32 sm:h-32 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white to-transparent opacity-80 rounded-t-full"></div>
+                                <span id="adminNumber" class="text-5xl sm:text-7xl leading-none font-black text-gray-900 z-10 mt-1 sm:mt-2"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="adminWaitingMessage" class="block w-32 h-32 sm:w-48 sm:h-48 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">
+                        Vacío
+                    </div>
+
+                    <button onclick="window.drawNumber()" class="w-full py-3 sm:py-4 bg-gradient-to-r from-casino-gold to-yellow-600 hover:from-yellow-500 hover:to-casino-gold text-white font-bold text-lg sm:text-xl rounded-xl shadow-[0_0_20px_rgba(217,119,6,0.3)] hover:shadow-[0_0_30px_rgba(217,119,6,0.5)] transform active:scale-95 transition-all">
+                        ¡SACAR BOLA!
+                    </button>
+                    
+                    <div class="mt-4 flex justify-between w-full text-xs sm:text-sm text-gray-400 font-medium px-1 sm:px-2">
+                        <span>Bolas: <span id="ballsDrawnCount" class="text-white">0</span></span>
+                        <span>Restan: <span id="ballsRemainingCount" class="text-white">90</span></span>
+                    </div>
+                </div>
+
+                <div class="bg-casino-panel border border-casino-border rounded-2xl p-4 sm:p-6 shadow-xl flex-grow">
+                    <h3 class="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-widest mb-3 sm:mb-4">Últimas bolas</h3>
+                    <div id="recentBallsHistory" class="flex flex-wrap gap-2 sm:gap-3">
+                        <p class="text-xs sm:text-sm text-gray-600 italic">Aún no hay historial</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-2/3 bg-casino-panel border border-casino-border rounded-2xl p-3 sm:p-6 shadow-xl flex flex-col overflow-x-auto no-scrollbar">
+                <h3 class="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-widest mb-4 sm:mb-6 text-center">Tablero Maestro</h3>
+                <!-- En el panel admin sí mantenemos la cuadrícula clásica de 90 números -->
+                <div id="adminGrid" class="flex flex-col gap-1 sm:gap-2 w-full h-full min-w-[280px] sm:min-w-[500px]"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- PANTALLA DE TARJETAS / CARTONES -->
+    <div id="cardsScreen" class="hidden h-screen w-full flex-col bg-slate-100 overflow-y-auto">
+        <header class="bg-white border-b border-gray-300 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50 shadow-sm">
+            <div class="flex items-center gap-3 sm:gap-4 w-full">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-serif font-bold text-lg sm:text-xl shadow-md shrink-0">T</div>
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold text-gray-800 leading-tight">Juega con tus Cartones</h2>
+                    <p class="firebase-status text-[10px] sm:text-xs text-gray-400 font-medium">● Sincronizando...</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 w-full sm:w-auto">
+                <select id="colorFilter" onchange="window.filterCards()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full sm:w-auto p-2 sm:p-2.5 outline-none">
+                    <option value="all">Todos los colores</option>
+                    <option value="rojo">Rojo Carmesí</option>
+                    <option value="amarillo">Ámbar Dorado</option>
+                    <option value="verde">Verde Esmeralda</option>
+                    <option value="azul">Azul Zafiro</option>
+                </select>
+            </div>
+        </header>
+        
+        <main class="flex-grow p-4 sm:p-8 max-w-[1600px] mx-auto w-full">
+            <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+                <!-- Los 150 cartones se generarán aquí -->
+            </div>
+        </main>
+    </div>
+
+    <!-- SCRIPT TIPO MÓDULO PARA IMPORTAR FIREBASE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        let firebaseConfig;
+        try {
+            firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : 'null');
+            if (!firebaseConfig) throw new Error("No canvas config");
+        } catch (e) {
+            firebaseConfig = {
+                apiKey: "AIzaSyDGHW0-lJzniSDIY_iimlLel1HPmkUeCIQ",
+                authDomain: "loterix-b44ce.firebaseapp.com",
+                projectId: "loterix-b44ce",
+                storageBucket: "loterix-b44ce.firebasestorage.app",
+                messagingSenderId: "896669396240",
+                appId: "1:896669396240:web:b2f1ffb3a1678b30208995",
+                measurementId: "G-N1G0RJ01ZZ"
+            };
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlAppId = urlParams.get('appId');
+        const resolvedAppId = urlAppId || (typeof __app_id !== 'undefined' ? __app_id : null);
+
+        let gameDocRef;
+        if (resolvedAppId) {
+            gameDocRef = doc(db, 'artifacts', resolvedAppId, 'public', 'data', 'bingo_rooms', 'sala_principal');
+        } else {
+            gameDocRef = doc(db, "bingo_rooms", "sala_principal"); 
+        }
+
+        const MAX_BALLS = 90;
+        let gameState = {
+            drawnNumbers: [],
+            currentNumber: null,
+            selectedCards: [],
+            winners: []
+        };
+
+        const globalCardsData = {};
+        let currentUser = null;
+
+        // --- EFECTOS DE SONIDO ---
+        const sndPop = new Audio('https://actions.google.com/sounds/v1/cartoon/pop.ogg');
+        const sndWin = new Audio('https://actions.google.com/sounds/v1/cartoon/clown_fanfare.ogg');
+        const sndClick = new Audio('https://actions.google.com/sounds/v1/ui/button_click.ogg');
+
+        let initialLoadDone = false;
+
+        function unlockAudio() {
+            [sndPop, sndWin, sndClick].forEach(snd => {
+                snd.volume = 0;
+                snd.play().catch(() => {});
+                snd.pause();
+                snd.currentTime = 0;
+                snd.volume = 1; 
+            });
+            document.removeEventListener('click', unlockAudio);
+        }
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Error de autenticación:", err);
+                document.querySelectorAll('.firebase-status').forEach(el => {
+                    el.textContent = "⚠ Auth Desactivada";
+                    el.classList.remove('text-green-400', 'text-gray-400', 'bg-slate-800');
+                    el.classList.add('text-red-500', 'bg-red-900/50');
+                });
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                document.querySelectorAll('.firebase-status').forEach(el => {
+                    el.textContent = "● Sincronizado";
+                    el.classList.remove('text-gray-400', 'text-red-500', 'bg-slate-800');
+                    el.classList.add('text-green-400', 'bg-green-900/50');
+                });
+                setupFirestoreListener();
+            }
+        });
+
+        initAuth();
+
+        function setupFirestoreListener() {
+            onSnapshot(gameDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    const previousDrawnCount = gameState.drawnNumbers.length;
+                    const previousWinnerCount = gameState.winners.length;
+
+                    gameState.drawnNumbers = data.drawnNumbers || [];
+                    gameState.currentNumber = data.currentNumber || null;
+                    gameState.selectedCards = data.selectedCards || [];
+                    gameState.winners = data.winners || [];
+                    
+                    if (initialLoadDone) {
+                        if (gameState.drawnNumbers.length > previousDrawnCount) {
+                            sndPop.currentTime = 0;
+                            sndPop.play().catch(() => {});
+                        }
+                        if (gameState.winners.length > previousWinnerCount) {
+                            sndWin.currentTime = 0;
+                            sndWin.play().catch(() => {});
+                        }
+                    } else {
+                        initialLoadDone = true;
+                    }
+
+                    updateAllUIs(); 
+                }
+            }, (error) => {
+                console.error("Error de conexión a Firestore: ", error);
+            });
+        }
+
+        async function broadcastState() {
+            if (!currentUser) return; 
+            try {
+                await setDoc(gameDocRef, gameState);
+            } catch (e) {
+                console.error("Error al sincronizar con Firebase: ", e);
+            }
+        }
+
+        window.openModeInNewWindow = function(mode) {
+            const baseUrl = window.location.href.split('#')[0].split('?')[0];
+            const appIdParam = typeof __app_id !== 'undefined' ? `?appId=${__app_id}` : '';
+            window.open(`${baseUrl}${appIdParam}#${mode}`, '_blank');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const baseUrl = window.location.href.split('#')[0].split('?')[0];
+            const appIdParam = typeof __app_id !== 'undefined' ? `?appId=${__app_id}` : '';
+            document.getElementById('shareableLink').textContent = `${baseUrl}${appIdParam}#cards`;
+
+            preGenerateCards(); 
+            
+            const hash = window.location.hash.replace('#', '');
+            if (hash === 'public' || hash === 'admin' || hash === 'cards') {
+                initMode(hash);
+            }
+        });
+
+        function initMode(mode) {
+            document.getElementById('selectionScreen').classList.add('hidden');
+            document.getElementById('selectionScreen').classList.remove('flex');
+            
+            if(mode === 'public') {
+                document.getElementById('publicScreen').classList.remove('hidden');
+                document.getElementById('publicScreen').classList.add('flex');
+                updateAllUIs();
+            } else if (mode === 'admin') {
+                const pass = prompt("Ingrese la contraseña de administrador (Por defecto es: novell123)");
+                if(pass !== "novell123") {
+                    alert("Contraseña incorrecta. Acceso denegado.");
+                    window.location.hash = '';
+                    location.reload();
+                    return;
+                }
+                document.getElementById('adminScreen').classList.remove('hidden');
+                document.getElementById('adminScreen').classList.add('flex');
+                initGrid90('adminGrid');
+                updateAllUIs();
+            } else if (mode === 'cards') {
+                document.getElementById('cardsScreen').classList.remove('hidden');
+                document.getElementById('cardsScreen').classList.add('flex');
+                generate150CardsUI();
+                updateAllUIs();
+            }
+        }
+
+        function checkForWinners() {
+            if (!gameState.winners) gameState.winners = [];
+            let newWinners = [];
+            
+            gameState.selectedCards.forEach(cardIdx => {
+                const cardData = globalCardsData[cardIdx];
+                if(cardData) {
+                    const isWinner = cardData.flatNumbers.every(num => gameState.drawnNumbers.includes(num));
+                    if (isWinner && !gameState.winners.includes(cardIdx)) {
+                        newWinners.push(cardIdx);
+                    }
+                }
+            });
+
+            if (newWinners.length > 0) {
+                gameState.winners.push(...newWinners);
+                return true;
+            }
+            return false;
+        }
+
+        window.drawNumber = function() {
+            if (gameState.drawnNumbers.length >= MAX_BALLS) {
+                alert("¡Se han sacado todas las bolas!");
+                return;
+            }
+
+            let newNum;
+            do {
+                newNum = Math.floor(Math.random() * MAX_BALLS) + 1;
+            } while (gameState.drawnNumbers.includes(newNum));
+
+            gameState.currentNumber = newNum;
+            gameState.drawnNumbers.push(newNum);
+
+            checkForWinners(); 
+            broadcastState(); 
+            updateAllUIs();
+        }
+
+        window.resetGame = function() {
+            if(confirm("¿Estás seguro de que deseas reiniciar la partida actual para todos los jugadores de internet?")) {
+                gameState = {
+                    drawnNumbers: [],
+                    currentNumber: null,
+                    selectedCards: [],
+                    winners: []
+                };
+                broadcastState(); 
+                updateAllUIs();
+            }
+        }
+
+        function updateAllUIs() {
+            if (!document.getElementById('publicScreen').classList.contains('hidden')) updateUIPublic();
+            if (!document.getElementById('adminScreen').classList.contains('hidden')) updateUIAdmin();
+            if (!document.getElementById('cardsScreen').classList.contains('hidden')) updateUICards();
+            updateGlobalWinner();
+        }
+
+        function initGrid90(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            for (let r = 0; r < 9; r++) {
+                const row = document.createElement('div');
+                row.className = "flex w-full items-stretch gap-[2px] sm:gap-2";
+                
+                for (let c = 1; c <= 10; c++) {
+                    let num = (r * 10) + c;
+                    const cell = document.createElement('div');
+                    cell.id = `${containerId}-cell-${num}`;
+                    
+                    let baseStyles = `number-cell flex-1 flex items-center justify-center font-semibold rounded sm:rounded-md border border-casino-border bg-casino-dark text-gray-500`;
+                    let extraStyles = 'text-[10px] sm:text-sm py-1 sm:py-2';
+                    
+                    cell.className = `${baseStyles} ${extraStyles}`;
+                    cell.textContent = num;
+                    row.appendChild(cell);
+                }
+                container.appendChild(row);
+            }
+        }
+
+        function updateUIPublic() {
+            const container = document.getElementById('publicMainBallContainer');
+            const waiting = document.getElementById('publicWaitingMessage');
+            
+            if (gameState.currentNumber) {
+                waiting.classList.add('hidden');
+                waiting.classList.remove('block');
+                
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+                
+                const publicBall = document.getElementById('publicBall');
+                if(publicBall) {
+                    publicBall.classList.remove('animate-pop');
+                    void publicBall.offsetWidth; 
+                    publicBall.classList.add('animate-pop');
+                }
+                document.getElementById('publicNumber').textContent = gameState.currentNumber;
+            } else {
+                waiting.classList.remove('hidden');
+                waiting.classList.add('block');
+                
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+            }
+
+            // AQUI SE CREAN LAS BOLAS SORTEADAS ESTILO IMAGEN (Círculos oscuros)
+            const drawnBallsContainer = document.getElementById('publicDrawnBalls');
+            if (drawnBallsContainer) {
+                drawnBallsContainer.innerHTML = '';
+                
+                if (gameState.drawnNumbers.length === 0) {
+                    drawnBallsContainer.innerHTML = '<p class="text-sm sm:text-lg text-gray-500 italic">Esperando bolas...</p>';
+                } else {
+                    gameState.drawnNumbers.forEach(num => {
+                        const pill = document.createElement('div');
+                        // Clases para que luzca exactamente como la imagen image_88878e.png
+                        pill.className = 'w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 rounded-full text-white font-bold text-xl sm:text-3xl flex items-center justify-center shadow-md shrink-0';
+                        pill.textContent = num;
+                        drawnBallsContainer.appendChild(pill);
+                    });
+                }
+            }
+        }
+
+        function updateUIAdmin() {
+            document.getElementById('ballsDrawnCount').textContent = gameState.drawnNumbers.length;
+            document.getElementById('ballsRemainingCount').textContent = MAX_BALLS - gameState.drawnNumbers.length;
+
+            const container = document.getElementById('adminMainBallContainer');
+            const waiting = document.getElementById('adminWaitingMessage');
+            
+            if (gameState.currentNumber) {
+                waiting.classList.add('hidden');
+                waiting.classList.remove('flex');
+                
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+
+                const adminBall = document.getElementById('adminBall');
+                if(adminBall) {
+                    adminBall.classList.remove('animate-pop');
+                    void adminBall.offsetWidth;
+                    adminBall.classList.add('animate-pop');
+                }
+
+                document.getElementById('adminNumber').textContent = gameState.currentNumber;
+            } else {
+                waiting.classList.remove('hidden');
+                waiting.classList.add('flex');
+                
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+            }
+
+            for(let i=1; i<=MAX_BALLS; i++) {
+                const cell = document.getElementById(`adminGrid-cell-${i}`);
+                if(cell) {
+                    if(gameState.drawnNumbers.includes(i)) cell.classList.add('active');
+                    else cell.classList.remove('active');
+                }
+            }
+
+            const historyContainer = document.getElementById('recentBallsHistory');
+            historyContainer.innerHTML = '';
+            
+            if(gameState.drawnNumbers.length === 0) {
+                historyContainer.innerHTML = '<p class="text-xs sm:text-sm text-gray-600 italic">Aún no hay historial</p>';
+            } else {
+                const recent = [...gameState.drawnNumbers].reverse().slice(1, 6);
+                recent.forEach(num => {
+                    const pill = document.createElement('div');
+                    pill.className = 'w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 border border-slate-600 rounded-full text-white font-bold text-sm sm:text-lg flex items-center justify-center shrink-0';
+                    pill.textContent = num;
+                    historyContainer.appendChild(pill);
+                });
+            }
+
+            const winnerAlert = document.getElementById('adminWinnerAlert');
+            if (gameState.winners && gameState.winners.length > 0) {
+                winnerAlert.classList.remove('hidden');
+                document.getElementById('adminWinnerCardsText').textContent = gameState.winners.join(', ');
+            } else {
+                winnerAlert.classList.add('hidden');
+            }
+        }
+
+        // Overlay gigante que se muestra en CUALQUIER pantalla si hay ganador
+        function updateGlobalWinner() {
+            const winnerOverlay = document.getElementById('globalWinnerOverlay');
+            if (gameState.winners && gameState.winners.length > 0) {
+                winnerOverlay.classList.remove('hidden');
+                winnerOverlay.classList.add('flex');
+                
+                const winnerContainer = document.getElementById('globalWinnerCards');
+                winnerContainer.innerHTML = '';
+                
+                gameState.winners.forEach(cardIdx => {
+                    const cardData = globalCardsData[cardIdx];
+                    if (cardData) {
+                        const cardHTML = buildCardHTML(cardData.matrix, cardIdx, cardData.theme);
+                        const wrapper = document.createElement('div');
+                        wrapper.className = `bingo-card shadow-[0_0_40px_rgba(245,158,11,0.6)] transform scale-90 md:scale-110 pointer-events-none rounded-lg w-full max-w-[600px] relative mx-auto my-4`;
+                        wrapper.innerHTML = cardHTML;
+
+                        wrapper.querySelectorAll('.card-cell').forEach(cell => {
+                            if(cell.textContent.trim() !== '') {
+                                cell.classList.add('marked');
+                                const themeTextClass = Array.from(cell.classList).find(c => c.startsWith('text-card-'));
+                                if(themeTextClass) {
+                                    const colorName = themeTextClass.replace('text-card-', '');
+                                    cell.classList.remove('bg-white'); 
+                                    cell.classList.add(`bg-card-${colorName}`, 'text-white'); 
+                                    cell.classList.remove(themeTextClass);
+                                }
+                            }
+                        });
+                        winnerContainer.appendChild(wrapper);
+                    }
+                });
+            } else {
+                winnerOverlay.classList.add('hidden');
+                winnerOverlay.classList.remove('flex');
+            }
+        }
+
+        function mulberry32(a) {
+            return function() {
+              var t = a += 0x6D2B79F5;
+              t = Math.imul(t ^ t >>> 15, t | 1);
+              t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+              return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+        
+        const randomCardGen = mulberry32(8888); 
+
+        function shuffleDeterministic(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(randomCardGen() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createSingleCard() {
+            let card = Array(3).fill(null).map(() => Array(9).fill(null));
+            let colsLimits = [
+                { min: 1, max: 9 }, { min: 10, max: 19 }, { min: 20, max: 29 },
+                { min: 30, max: 39 }, { min: 40, max: 49 }, { min: 50, max: 59 },
+                { min: 60, max: 69 }, { min: 70, max: 79 }, { min: 80, max: 90 }
+            ];
+
+            for (let r = 0; r < 3; r++) {
+                let availableCols = [0,1,2,3,4,5,6,7,8];
+                shuffleDeterministic(availableCols);
+                let chosenCols = availableCols.slice(0, 5);
+                chosenCols.forEach(c => card[r][c] = true); 
+            }
+
+            for (let c = 0; c < 9; c++) {
+                let slots = 0;
+                for (let r = 0; r < 3; r++) if (card[r][c]) slots++;
+                
+                if (slots > 0) {
+                    let possible = [];
+                    for (let n = colsLimits[c].min; n <= colsLimits[c].max; n++) possible.push(n);
+                    shuffleDeterministic(possible);
+                    let picked = possible.slice(0, slots).sort((a,b) => a-b);
+                    
+                    let pIdx = 0;
+                    for (let r = 0; r < 3; r++) {
+                        if (card[r][c]) {
+                            card[r][c] = picked[pIdx++];
+                        }
+                    }
+                }
+            }
+            return card;
+        }
+
+        function preGenerateCards() {
+            let cardIndex = 1;
+            cardThemes.forEach(theme => {
+                for(let i=0; i<theme.count; i++) {
+                    const matrix = createSingleCard();
+                    let flatNumbers = [];
+                    for(let r=0; r<3; r++) {
+                        for(let c=0; c<9; c++) {
+                            if(matrix[r][c]) flatNumbers.push(matrix[r][c]);
+                        }
+                    }
+                    globalCardsData[cardIndex] = { matrix, flatNumbers, theme };
+                    cardIndex++;
+                }
+            });
+        }
+
+        const cardThemes = [
+            { id: 'rojo', bg: 'bg-card-red', border: 'border-card-red', text: 'text-card-red', label: 'Rojo Carmesí', count: 38 },
+            { id: 'amarillo', bg: 'bg-card-yellow', border: 'border-card-yellow', text: 'text-card-yellow', label: 'Ámbar Dorado', count: 38 },
+            { id: 'verde', bg: 'bg-card-green', border: 'border-card-green', text: 'text-card-green', label: 'Verde Esmeralda', count: 37 },
+            { id: 'azul', bg: 'bg-card-blue', border: 'border-card-blue', text: 'text-card-blue', label: 'Azul Zafiro', count: 37 }
+        ];
+
+        function generate150CardsUI() {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+            
+            for (let cardIndex = 1; cardIndex <= 150; cardIndex++) {
+                const cardData = globalCardsData[cardIndex];
+                const cardHTML = buildCardHTML(cardData.matrix, cardIndex, cardData.theme);
+                
+                const wrapper = document.createElement('div');
+                wrapper.id = `card-wrap-${cardIndex}`;
+                wrapper.className = `bingo-card shadow-lg hover:shadow-xl hover:scale-[1.02] cursor-pointer transition-all card-item ${cardData.theme.id} relative max-w-full`;
+                wrapper.setAttribute('onclick', `window.selectCard(${cardIndex})`);
+                wrapper.innerHTML = cardHTML;
+                container.appendChild(wrapper);
+            }
+        }
+
+        function buildCardHTML(matrix, index, theme) {
+            let cellsHTML = '';
+            for(let r=0; r<3; r++) {
+                for(let c=0; c<9; c++) {
+                    const val = matrix[r][c];
+                    if(val) {
+                        cellsHTML += `<div class="bg-white flex items-center justify-center font-bold text-[13px] sm:text-xl lg:text-2xl ${theme.text} border-r border-b ${theme.border} card-cell global-num-${val}" data-num="${val}">${val}</div>`;
+                    } else {
+                        cellsHTML += `<div class="bg-card-bgEmpty border-r border-b ${theme.border}"></div>`;
+                    }
+                }
+            }
+
+            return `
+                <div class="border-[3px] sm:border-4 ${theme.border} rounded-lg overflow-hidden bg-white w-full">
+                    <div class="${theme.bg} text-white px-2 py-1 sm:px-3 sm:py-1 flex justify-between items-center text-[10px] sm:text-sm font-medium">
+                        <span>Cartón n.º ${index}</span>
+                        <span class="truncate ml-2">www.novell-bingo.net</span>
+                    </div>
+                    <div class="grid grid-cols-9 grid-rows-3 h-24 sm:h-36 md:h-40 bg-white border-l border-t ${theme.border}">
+                        ${cellsHTML}
+                    </div>
+                </div>
+                <div class="card-overlay absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] hidden flex-col items-center justify-center rounded-lg z-20 transition-all duration-300">
+                    <div class="border-2 sm:border-4 border-casino-gold text-casino-gold font-black text-sm sm:text-xl lg:text-3xl px-3 py-1 sm:px-6 sm:py-2 rounded-xl -rotate-12 uppercase tracking-widest shadow-[0_0_30px_rgba(217,119,6,0.4)] bg-casino-dark/90">
+                        Seleccionado
+                    </div>
+                </div>
+            `;
+        }
+
+        window.selectCard = function(index) {
+            sndClick.currentTime = 0;
+            sndClick.play().catch(() => {});
+
+            if (!gameState.selectedCards) gameState.selectedCards = [];
+            
+            if (!gameState.selectedCards.includes(index)) {
+                gameState.selectedCards.push(index);
+                checkForWinners(); 
+                broadcastState(); 
+                updateAllUIs();
+            }
+        }
+
+        function updateUICards() {
+            const cardsContainer = document.getElementById('cardsContainer');
+            if (cardsContainer) {
+                
+                cardsContainer.querySelectorAll('.card-cell.marked').forEach(el => {
+                    el.classList.remove('marked', 'text-white');
+                    if (el.dataset.origBgClass) el.classList.remove(el.dataset.origBgClass);
+                    if (el.dataset.origTextClass) el.classList.add(el.dataset.origTextClass);
+                    el.classList.add('bg-white');
+                });
+
+                gameState.drawnNumbers.forEach(num => {
+                    cardsContainer.querySelectorAll(`.global-num-${num}`).forEach(el => {
+                        el.classList.add('marked');
+                        const themeTextClass = Array.from(el.classList).find(c => c.startsWith('text-card-'));
+                        if(themeTextClass) {
+                            const colorName = themeTextClass.replace('text-card-', '');
+                            el.classList.remove('bg-white');
+                            el.classList.add(`bg-card-${colorName}`, 'text-white');
+                            el.classList.remove(themeTextClass);
+                            
+                            el.dataset.origTextClass = themeTextClass;
+                            el.dataset.origBgClass = `bg-card-${colorName}`;
+                        }
+                    });
+                });
+
+                if (!gameState.selectedCards) gameState.selectedCards = [];
+                for (let i = 1; i <= 150; i++) {
+                    const cardWrap = document.getElementById(`card-wrap-${i}`);
+                    if (cardWrap) {
+                        const overlay = cardWrap.querySelector('.card-overlay');
+                        if (gameState.selectedCards.includes(i)) {
+                            overlay.classList.remove('hidden');
+                            overlay.classList.add('flex');
+                            cardWrap.classList.remove('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
+                        } else {
+                            overlay.classList.add('hidden');
+                            overlay.classList.remove('flex');
+                            cardWrap.classList.add('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
+                        }
+                    }
+                }
+            }
+        }
+
+        window.filterCards = function() {
+            const filter = document.getElementById('colorFilter').value;
+            const items = document.querySelectorAll('.card-item');
+            
+            items.forEach(item => {
+                if(filter === 'all' || item.classList.contains(filter)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
