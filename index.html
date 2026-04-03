@@ -121,7 +121,7 @@
     </div>
 
     <!-- PANTALLA DE SELECCIÓN DE MODO -->
-    <div id="selectionScreen" class="flex-grow flex items-center justify-center relative z-50 p-4">
+    <div id="selectionScreen" class="hidden flex-grow items-center justify-center relative z-50 p-4">
         <div class="bg-casino-panel border border-casino-gold rounded-2xl shadow-2xl p-6 sm:p-10 max-w-2xl w-full text-center">
             <h1 class="text-3xl sm:text-4xl font-serif font-bold text-white mb-2">BINGO EN LÍNEA</h1>
             <div class="h-1 w-20 bg-casino-gold mx-auto mb-2 rounded-full"></div>
@@ -340,8 +340,8 @@
         let currentUser = null;
 
         // --- EFECTOS DE SONIDO ---
-        const sndPop = new Audio('https://actions.google.com/sounds/v1/cartoon/pop.ogg');
-        const sndWin = new Audio('https://actions.google.com/sounds/v1/cartoon/clown_fanfare.ogg');
+        const sndPop = new Audio('https://actions.google.com/sounds/v1/ui/message_alert.ogg'); // Sonido más elegante para bola
+        const sndWin = new Audio('https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg'); // Sonido mágico y agradable para ganador
         const sndClick = new Audio('https://actions.google.com/sounds/v1/ui/button_click.ogg');
 
         let initialLoadDone = false;
@@ -448,6 +448,10 @@
             const hash = window.location.hash.replace('#', '');
             if (hash === 'public' || hash === 'admin' || hash === 'cards') {
                 initMode(hash);
+            } else {
+                // Si no hay modo en la URL, mostramos la pantalla de selección principal
+                document.getElementById('selectionScreen').classList.remove('hidden');
+                document.getElementById('selectionScreen').classList.add('flex');
             }
         });
 
@@ -460,8 +464,8 @@
                 document.getElementById('publicScreen').classList.add('flex');
                 updateAllUIs();
             } else if (mode === 'admin') {
-                const pass = prompt("Ingrese la contraseña de administrador (Por defecto es: novell123)");
-                if(pass !== "novell123") {
+                const pass = prompt("Ingrese la contraseña de administrador:");
+                if(pass !== "d5720") {
                     alert("Contraseña incorrecta. Acceso denegado.");
                     window.location.hash = '';
                     location.reload();
