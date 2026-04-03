@@ -656,15 +656,22 @@
             let newWinners = [];
             let winnerFound = false;
             
+            // Optimización Extrema: Usar Set para búsquedas de memoria instantáneas O(1)
+            const drawnSet = new Set(gameState.drawnNumbers);
+            const existingWinners = new Set(gameState.winners.map(w => w.cardIdx));
+            
             Object.keys(gameState.selectedCards || {}).forEach(cardIdxStr => {
                 const cardIdx = parseInt(cardIdxStr);
-                const cardData = globalCardsData[cardIdx];
                 
+                // Si este cartón ya fue declarado ganador antes, lo saltamos para no gastar memoria
+                if (existingWinners.has(cardIdx)) return;
+
+                const cardData = globalCardsData[cardIdx];
                 if(cardData) {
-                    const isWinner = cardData.flatNumbers.every(num => gameState.drawnNumbers.includes(num));
-                    const alreadyWinner = gameState.winners.some(w => w.cardIdx === cardIdx);
+                    // Verificación instantánea gracias al Set
+                    const isWinner = cardData.flatNumbers.every(num => drawnSet.has(num));
                     
-                    if (isWinner && !alreadyWinner) {
+                    if (isWinner) {
                         newWinners.push({ cardIdx });
                         winnerFound = true;
                     }
@@ -940,9 +947,11 @@
             }
 
             let newNum;
+            // Optimización en la generación de la bola aleatoria
+            const drawnSet = new Set(gameState.drawnNumbers);
             do {
                 newNum = Math.floor(Math.random() * MAX_BALLS) + 1;
-            } while (gameState.drawnNumbers.includes(newNum));
+            } while (drawnSet.has(newNum));
 
             // Reproducir sonido para el administrador inmediatamente
             sndPop.currentTime = 0;
@@ -1003,6 +1012,9 @@
             const container = document.getElementById(containerId);
             container.innerHTML = '';
             
+            // Caché del tablero maestro para evitar consultas al DOM
+            window.adminGridCellsMap = {}; 
+            
             for (let r = 0; r < 9; r++) {
                 const row = document.createElement('div');
                 row.className = "flex w-full items-stretch gap-[2px] sm:gap-2";
@@ -1018,6 +1030,8 @@
                     cell.className = `${baseStyles} ${extraStyles}`;
                     cell.textContent = num;
                     row.appendChild(cell);
+                    
+                    window.adminGridCellsMap[num] = cell; // Guardar en memoria
                 }
                 container.appendChild(row);
             }
@@ -1179,7 +1193,8 @@
             }
 
             for(let i=1; i<=MAX_BALLS; i++) {
-                const cell = document.getElementById(`adminGrid-cell-${i}`);
+                // Usamos el caché de memoria instantáneo en lugar de getElementById
+                const cell = window.adminGridCellsMap ? window.adminGridCellsMap[i] : document.getElementById(`adminGrid-cell-${i}`);
                 if(cell) {
                     const isActive = cell.classList.contains('active');
                     const shouldBeActive = gameState.drawnNumbers.includes(i);
@@ -1236,13 +1251,18 @@
 
         function renderAccountsGrid() {
             const grid = document.getElementById('accountsGrid');
-            grid.innerHTML = '';
             
+            // Optimización Gigante: No repintar la lista entera de jugadores si nadie cambió sus datos
+            const currentStateStr = JSON.stringify(gameState.accounts || {});
+            if (grid.dataset.renderedState === currentStateStr) return; 
+            
+            grid.innerHTML = '';
             let totalAssigned = 0;
 
             if (!gameState.accounts || Object.keys(gameState.accounts).length === 0) {
                 grid.innerHTML = '<div class="text-center py-10 w-full col-span-full"><p class="text-gray-400 mb-4">No hay jugadores registrados. Añade uno arriba.</p></div>';
                 document.getElementById('totalCreditsCounter').textContent = `Créditos asignados: 0/150`;
+                grid.dataset.renderedState = currentStateStr;
                 return;
             }
 
@@ -1280,6 +1300,7 @@
 
             grid.appendChild(container);
             document.getElementById('totalCreditsCounter').textContent = `Créditos asignados: ${totalAssigned}/150`;
+            grid.dataset.renderedState = currentStateStr; // Guardar memoria
         }
 
         // Overlay gigante que se muestra en CUALQUIER pantalla si hay ganador
@@ -1425,6 +1446,17 @@
                 wrapper.innerHTML = cardHTML;
                 container.appendChild(wrapper);
             }
+
+            // --- INDEXACIÓN DE MEMORIA (EVITA CONGELAMIENTOS FUTUROS) ---
+            window.numberCellsMap = {};
+            for (let i = 1; i <= 90; i++) {
+                window.numberCellsMap[i] = Array.from(container.querySelectorAll(`.global-num-${i}`));
+            }
+            window.cardWrapsMap = {};
+            for (let i = 1; i <= 150; i++) {
+                window.cardWrapsMap[i] = document.getElementById(`card-wrap-${i}`);
+            }
+            window.allCardItems = Array.from(document.querySelectorAll('.card-item'));
         }
 
         function buildCardHTML(matrix, index, theme) {
@@ -1684,39 +1716,43 @@
                 // --- OPTIMIZACIÓN EXTREMA: NÚMEROS MARCADOS ---
                 if (!window.lastRenderedDrawnNumbers) window.lastRenderedDrawnNumbers = [];
                 
-                // Si hay menos números que antes (el admin reinició la partida), limpiamos todo
+                // Si hay menos números que antes (el admin reinició la partida), limpiamos todo con memoria
                 if (gameState.drawnNumbers.length < window.lastRenderedDrawnNumbers.length) {
-                    cardsContainer.querySelectorAll('.card-cell.marked').forEach(el => {
-                        el.classList.remove('marked', 'text-white');
-                        if (el.dataset.origBgClass) el.classList.remove(el.dataset.origBgClass);
-                        if (el.dataset.origTextClass) el.classList.add(el.dataset.origTextClass);
-                        el.classList.add('bg-white');
+                    window.lastRenderedDrawnNumbers.forEach(num => {
+                        if (window.numberCellsMap && window.numberCellsMap[num]) {
+                            window.numberCellsMap[num].forEach(el => {
+                                el.classList.remove('marked', 'text-white');
+                                if (el.dataset.origBgClass) el.classList.remove(el.dataset.origBgClass);
+                                if (el.dataset.origTextClass) el.classList.add(el.dataset.origTextClass);
+                                el.classList.add('bg-white');
+                            });
+                        }
                     });
                     window.lastRenderedDrawnNumbers = [];
                 }
 
-                // Extraemos SOLO los números que acaban de salir y no han sido pintados
+                // Extraemos SOLO los números que acaban de salir y usamos el mapa instantáneo para pintarlos
                 const newNumbers = gameState.drawnNumbers.slice(window.lastRenderedDrawnNumbers.length);
                 if (newNumbers.length > 0) {
                     newNumbers.forEach(num => {
-                        cardsContainer.querySelectorAll(`.global-num-${num}`).forEach(el => {
-                            // Previene repintados innecesarios
-                            if (!el.classList.contains('marked')) {
-                                el.classList.add('marked');
-                                const themeTextClass = Array.from(el.classList).find(c => c.startsWith('text-card-'));
-                                if(themeTextClass) {
-                                    const colorName = themeTextClass.replace('text-card-', '');
-                                    el.classList.remove('bg-white');
-                                    el.classList.add(`bg-card-${colorName}`, 'text-white');
-                                    el.classList.remove(themeTextClass);
-                                    
-                                    el.dataset.origTextClass = themeTextClass;
-                                    el.dataset.origBgClass = `bg-card-${colorName}`;
+                        if (window.numberCellsMap && window.numberCellsMap[num]) {
+                            window.numberCellsMap[num].forEach(el => {
+                                if (!el.classList.contains('marked')) {
+                                    el.classList.add('marked');
+                                    const themeTextClass = Array.from(el.classList).find(c => c.startsWith('text-card-'));
+                                    if(themeTextClass) {
+                                        const colorName = themeTextClass.replace('text-card-', '');
+                                        el.classList.remove('bg-white');
+                                        el.classList.add(`bg-card-${colorName}`, 'text-white');
+                                        el.classList.remove(themeTextClass);
+                                        
+                                        el.dataset.origTextClass = themeTextClass;
+                                        el.dataset.origBgClass = `bg-card-${colorName}`;
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     });
-                    // Guardamos la memoria de lo que ya pintamos
                     window.lastRenderedDrawnNumbers = [...gameState.drawnNumbers];
                 }
 
@@ -1727,7 +1763,6 @@
                 const currentSelectedStr = JSON.stringify(gameState.selectedCards || {});
                 const lastSelectedStr = JSON.stringify(window.lastRenderedSelectedCards);
                 
-                // Solo recorrer los 150 cartones si HUBO ALGÚN CAMBIO en las reservas o en el estado del juego
                 const selectionChanged = currentSelectedStr !== lastSelectedStr;
                 const gameStartedChanged = gameState.isGameStarted !== window.lastGameStartedState;
 
@@ -1738,9 +1773,9 @@
                         const currentOwner = gameState.selectedCards[i] || '';
                         const previousOwner = window.lastRenderedSelectedCards[i] || '';
                         
-                        // Solo modificar el HTML si este cartón en específico cambió de dueño
+                        // Evita buscar IDs usando el caché rápido
                         if (currentOwner !== previousOwner || gameStartedChanged) {
-                            const cardWrap = document.getElementById(`card-wrap-${i}`);
+                            const cardWrap = window.cardWrapsMap ? window.cardWrapsMap[i] : document.getElementById(`card-wrap-${i}`);
                             if (cardWrap) {
                                 const overlay = cardWrap.querySelector('.card-overlay');
                                 const overlayText = overlay.querySelector('div'); 
@@ -1751,7 +1786,6 @@
                                     cardWrap.classList.remove('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
                                     
                                     if (currentOwner === localPlayerAccountId) {
-                                        // MI CARTÓN
                                         overlay.classList.remove('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
                                         overlay.classList.add('flex', 'bg-transparent', 'pointer-events-none');
                                         
@@ -1760,7 +1794,6 @@
                                         
                                         cardWrap.setAttribute('onclick', `window.customAlert('Mi Cartón', 'Ya tienes este cartón seleccionado. ¡Mucha suerte!')`);
                                     } else {
-                                        // CARTÓN DE OTRO JUGADOR
                                         overlay.classList.remove('hidden', 'bg-transparent', 'pointer-events-none');
                                         overlay.classList.add('flex', 'bg-slate-900/80', 'backdrop-blur-[2px]');
                                         
@@ -1770,7 +1803,6 @@
                                         cardWrap.setAttribute('onclick', `window.customAlert('Cartón Reservado', 'Este cartón ya ha sido reservado por otro jugador.')`);
                                     }
                                 } else {
-                                    // CARTÓN LIBRE
                                     overlay.classList.remove('flex', 'bg-transparent', 'pointer-events-none');
                                     overlay.classList.add('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
                                     
@@ -1784,7 +1816,6 @@
                     window.lastRenderedSelectedCards = {...gameState.selectedCards};
                     window.lastGameStartedState = gameState.isGameStarted;
                     
-                    // Ejecutamos el filtro solo cuando sea necesario
                     window.filterCards();
                 }
             }
@@ -1792,15 +1823,14 @@
 
         window.filterCards = function() {
             const filter = document.getElementById('colorFilter').value;
-            const items = document.querySelectorAll('.card-item');
+            // Usar elementos cacheados
+            const items = window.allCardItems || document.querySelectorAll('.card-item');
             
             let showOnlyMyCards = false;
             
-            // Regla: Si el juego ya inició, FORZAR a que todos vean solo sus cartas
             if (gameState.isGameStarted) {
                 showOnlyMyCards = true;
             } else if (localPlayerAccountId && gameState.accounts && gameState.accounts[localPlayerAccountId]) {
-                // Si aún no inicia, pero el jugador ya agotó sus créditos, también ve solo sus cartas
                 const info = gameState.accounts[localPlayerAccountId];
                 if (info.usedCredits >= info.totalCredits && info.totalCredits > 0) {
                     showOnlyMyCards = true;
@@ -1814,7 +1844,7 @@
                 const shouldShow = showOnlyMyCards ? (isMine && matchesColor) : matchesColor;
                 const newDisplayValue = shouldShow ? 'block' : 'none';
                 
-                // Evitar forzar el recálculo visual del navegador si no ha cambiado el display
+                // Super optimización: Evitar repintar si no cambió
                 if (item.style.display !== newDisplayValue) {
                     item.style.display = newDisplayValue;
                 }
