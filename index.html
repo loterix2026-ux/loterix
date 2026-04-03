@@ -84,12 +84,19 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%;
-            height: 80%;
+            width: 2.5rem;
+            height: 2.5rem;
             background-color: currentColor;
             opacity: 0.2;
             border-radius: 50%;
             z-index: 0;
+        }
+
+        @media (max-width: 640px) {
+            .card-cell.marked::after {
+                width: 1.5rem;
+                height: 1.5rem;
+            }
         }
 
         .no-scrollbar::-webkit-scrollbar {
@@ -109,15 +116,94 @@
             <svg class="w-20 h-20 sm:w-32 sm:h-32 text-casino-gold mx-auto mb-4 drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
         </div>
         <h2 class="text-6xl sm:text-8xl md:text-9xl font-serif font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-casino-goldLight via-yellow-200 to-casino-gold drop-shadow-2xl mb-6 shrink-0">¡BINGO!</h2>
-        <p class="text-xl sm:text-3xl text-gray-300 font-light mb-6 shrink-0">El cartón ganador es:</p>
+        <p class="text-xl sm:text-3xl text-gray-300 font-light mb-2 shrink-0">El cartón ganador es:</p>
         
-        <div id="globalWinnerCards" class="flex gap-8 flex-wrap justify-center w-full max-w-5xl pb-10">
+        <div id="globalWinnerCards" class="flex gap-8 flex-wrap justify-center w-full max-w-5xl pb-10 mt-8">
             <!-- Se inyecta la tarjeta ganadora aquí -->
         </div>
         
         <button onclick="document.getElementById('globalWinnerOverlay').classList.add('hidden'); document.getElementById('globalWinnerOverlay').classList.remove('flex');" class="mt-4 px-6 py-3 bg-casino-panel border border-gray-600 rounded-lg text-white font-medium hover:bg-gray-700 transition-all shadow-lg shrink-0 mb-10">
             Cerrar este aviso
         </button>
+    </div>
+
+    <!-- MODALES PERSONALIZADOS -->
+    
+    <!-- Modal de Contraseña Admin -->
+    <div id="adminPassModal" class="hidden fixed inset-0 bg-slate-900/90 z-[300] flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-casino-panel border border-casino-gold rounded-xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden p-6">
+            <h3 class="text-white font-bold text-lg mb-2 text-center">Acceso Administrador</h3>
+            <p class="text-gray-400 text-sm mb-4 text-center">Ingresa la contraseña de seguridad para entrar al panel de control.</p>
+            <input type="password" id="adminPassInput" class="w-full bg-casino-dark border border-gray-600 text-white rounded-lg p-3 text-center text-xl mb-2 focus:outline-none focus:border-casino-gold" placeholder="Contraseña">
+            <p id="adminPassError" class="text-red-400 text-xs text-center mb-4 hidden">Contraseña incorrecta.</p>
+            <div class="flex gap-3">
+                <button onclick="window.cancelAdminPass()" class="flex-1 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-500 transition-colors">Cancelar</button>
+                <button onclick="window.verifyAdminPass()" class="flex-1 py-2 bg-casino-gold text-white rounded-lg font-medium hover:bg-yellow-600 transition-colors">Ingresar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ingreso de Código para Cartones -->
+    <div id="loginModal" class="hidden fixed inset-0 bg-slate-900/80 z-[200] flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden">
+            <div class="bg-emerald-600 p-4 text-center">
+                <h3 class="text-white font-bold text-lg">Inicia tu Sesión</h3>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <p id="loginMsg" class="text-gray-700 text-sm text-center">Ingresa tu usuario y contraseña para jugar.</p>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Usuario</label>
+                    <input type="text" id="userEntryInput" class="w-full border border-gray-300 rounded-lg p-3 text-center text-xl font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 mb-4" placeholder="Ej. juan" autocomplete="off">
+                    
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Contraseña</label>
+                    <div class="relative">
+                        <input type="password" id="passEntryInput" class="w-full border border-gray-300 rounded-lg p-3 text-center text-xl font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200" placeholder="••••••" autocomplete="off">
+                        <button type="button" onclick="window.togglePassVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-emerald-600 transition-colors">
+                            <svg id="eyeIconClosed" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                            <svg id="eyeIconOpen" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <p id="loginError" class="text-red-500 text-xs text-center font-semibold hidden">Error</p>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="window.cancelLogin()" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors">Cancelar</button>
+                    <button onclick="window.confirmLogin()" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors">Ingresar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Alerta General -->
+    <div id="customAlertModal" class="hidden fixed inset-0 bg-slate-900/80 z-[300] flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden text-center">
+            <div class="p-6">
+                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-600">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <h3 class="text-gray-900 font-bold text-lg mb-2" id="customAlertTitle">Atención</h3>
+                <p class="text-gray-600 text-sm mb-6" id="customAlertMessage">Mensaje</p>
+                <button onclick="document.getElementById('customAlertModal').classList.add('hidden'); document.getElementById('customAlertModal').classList.remove('flex');" class="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación -->
+    <div id="customConfirmModal" class="hidden fixed inset-0 bg-slate-900/80 z-[300] flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-casino-panel border border-casino-border rounded-xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden text-center p-6">
+            <h3 class="text-white font-bold text-lg mb-2" id="customConfirmTitle">Confirmar</h3>
+            <p class="text-gray-400 text-sm mb-6" id="customConfirmMessage">Mensaje</p>
+            <div class="flex gap-3">
+                <button onclick="window.closeConfirm()" class="flex-1 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-500 transition-colors">Cancelar</button>
+                <button onclick="window.executeConfirm()" class="flex-1 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-500 transition-colors">Aceptar</button>
+            </div>
+        </div>
     </div>
 
     <!-- PANTALLA DE SELECCIÓN DE MODO -->
@@ -161,7 +247,7 @@
 
     <!-- PANTALLA DEL PÚBLICO -->
     <div id="publicScreen" class="hidden h-screen w-full flex-col items-center justify-between py-6 px-4 sm:py-8 sm:px-12 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); pointer-events: none;"></div>
+        <div class="absolute inset-0 opacity-5" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); pointer-events: none;"></div>
         
         <header class="text-center w-full z-10">
             <h1 class="text-4xl sm:text-6xl font-serif font-black tracking-[0.2em] sm:tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-casino-goldLight via-yellow-200 to-casino-gold drop-shadow-lg">BINGO</h1>
@@ -182,7 +268,7 @@
             </div>
         </main>
 
-        <!-- PANEL DE NÚMEROS SORTEADOS ESTILO "IMAGEN" (CIRCULOS OSCUROS) -->
+        <!-- PANEL DE NÚMEROS SORTEADOS -->
         <footer class="w-full max-w-6xl z-10 bg-casino-panel/80 backdrop-blur-md border border-casino-border p-6 sm:p-8 rounded-2xl shadow-2xl overflow-y-auto max-h-[45vh] no-scrollbar">
             <h3 class="text-sm sm:text-xl font-bold text-gray-400 uppercase tracking-widest mb-4 sm:mb-6 text-left">Números Sorteados</h3>
             <div id="publicDrawnBalls" class="flex flex-wrap gap-3 sm:gap-4 w-full justify-start">
@@ -202,7 +288,13 @@
                     <p class="firebase-status text-[10px] sm:text-xs text-gray-400 font-medium">● Sincronizando...</p>
                 </div>
             </div>
-            <div class="flex w-full sm:w-auto justify-end">
+            <div class="flex w-full sm:w-auto justify-end gap-2">
+                <button id="btnForceStart" onclick="window.startGame()" class="hidden px-3 py-2 sm:px-4 sm:py-2 bg-emerald-600/20 border border-emerald-500 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg text-xs sm:text-sm font-medium transition-colors w-full sm:w-auto">
+                    Forzar Inicio
+                </button>
+                <button onclick="window.showAccountsModal()" class="px-3 py-2 sm:px-4 sm:py-2 border border-casino-gold text-casino-gold hover:bg-yellow-900/30 rounded-lg text-xs sm:text-sm font-medium transition-colors w-full sm:w-auto">
+                    Ver Jugadores
+                </button>
                 <button onclick="window.resetGame()" class="px-3 py-2 sm:px-4 sm:py-2 border border-red-900 text-red-400 hover:bg-red-950 hover:text-red-300 rounded-lg text-xs sm:text-sm font-medium transition-colors w-full sm:w-auto">
                     Reiniciar Partida
                 </button>
@@ -215,11 +307,21 @@
                 
                 <div id="adminWinnerAlert" class="hidden w-full bg-gradient-to-r from-yellow-900 to-casino-gold border border-yellow-400 rounded-xl p-3 sm:p-4 shadow-2xl text-center animate-pulse">
                     <h3 class="text-xl sm:text-2xl font-black text-white drop-shadow-md">¡TENEMOS BINGO!</h3>
-                    <p class="text-sm sm:text-base text-yellow-100 mt-1">Cartón(es): <span id="adminWinnerCardsText" class="font-bold text-lg sm:text-2xl"></span></p>
+                    <p class="text-sm sm:text-base text-yellow-100 mt-1">Cartón(es) ganador(es): <span id="adminWinnerCardsText" class="font-bold text-lg sm:text-2xl"></span></p>
                 </div>
 
                 <div class="bg-casino-panel border border-casino-border rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col items-center">
-                    <div class="w-full text-center mb-4 sm:mb-6">
+                    
+                    <!-- BANNER DE INICIO DE JUEGO (Se muestra cuando todos los créditos se usan) -->
+                    <div id="startGameBanner" class="hidden w-full bg-gradient-to-r from-emerald-600 to-green-500 border border-emerald-400 rounded-xl p-4 sm:p-6 shadow-2xl text-center flex-col items-center justify-center animate-pulse mb-6">
+                        <h3 class="text-xl sm:text-2xl font-black text-white drop-shadow-md mb-2">¡Todos listos!</h3>
+                        <p class="text-sm text-emerald-100 mb-4">Se han utilizado todos los créditos. Es momento de comenzar el sorteo.</p>
+                        <button onclick="window.startGame()" class="px-6 py-3 bg-white text-emerald-700 font-bold text-lg rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.4)] hover:scale-105 transition-transform w-full">
+                            Dar Inicio al Juego
+                        </button>
+                    </div>
+
+                    <div id="drawSectionTitle" class="w-full text-center mb-4 sm:mb-6">
                         <span class="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-widest">Último Número</span>
                     </div>
                     
@@ -232,12 +334,17 @@
                         </div>
                     </div>
                     <div id="adminWaitingMessage" class="block w-32 h-32 sm:w-48 sm:h-48 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">
-                        Vacío
+                        Esperando...
                     </div>
 
-                    <button onclick="window.drawNumber()" class="w-full py-3 sm:py-4 bg-gradient-to-r from-casino-gold to-yellow-600 hover:from-yellow-500 hover:to-casino-gold text-white font-bold text-lg sm:text-xl rounded-xl shadow-[0_0_20px_rgba(217,119,6,0.3)] hover:shadow-[0_0_30px_rgba(217,119,6,0.5)] transform active:scale-95 transition-all">
-                        ¡SACAR BOLA!
-                    </button>
+                    <div id="drawButtonsContainer" class="hidden gap-2 w-full flex-row">
+                        <button id="btnDrawBall" onclick="window.drawNumber()" class="flex-grow py-3 sm:py-4 bg-gradient-to-r from-casino-gold to-yellow-600 hover:from-yellow-500 hover:to-casino-gold text-white font-bold text-lg sm:text-xl rounded-xl shadow-[0_0_20px_rgba(217,119,6,0.3)] hover:shadow-[0_0_30px_rgba(217,119,6,0.5)] transform active:scale-95 transition-all">
+                            ¡SACAR BOLA!
+                        </button>
+                        <button id="btnAutoDraw" onclick="window.toggleAutoDraw()" class="w-1/3 py-3 sm:py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm sm:text-base rounded-xl shadow-lg transition-all">
+                            Automático
+                        </button>
+                    </div>
                     
                     <div class="mt-4 flex justify-between w-full text-xs sm:text-sm text-gray-400 font-medium px-1 sm:px-2">
                         <span>Bolas: <span id="ballsDrawnCount" class="text-white">0</span></span>
@@ -255,32 +362,88 @@
 
             <div class="w-full lg:w-2/3 bg-casino-panel border border-casino-border rounded-2xl p-3 sm:p-6 shadow-xl flex flex-col overflow-x-auto no-scrollbar">
                 <h3 class="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-widest mb-4 sm:mb-6 text-center">Tablero Maestro</h3>
-                <!-- En el panel admin sí mantenemos la cuadrícula clásica de 90 números -->
                 <div id="adminGrid" class="flex flex-col gap-1 sm:gap-2 w-full h-full min-w-[280px] sm:min-w-[500px]"></div>
             </div>
 
         </main>
     </div>
 
-    <!-- PANTALLA DE TARJETAS / CARTONES -->
-    <div id="cardsScreen" class="hidden h-screen w-full flex-col bg-slate-100 overflow-y-auto">
-        <header class="bg-white border-b border-gray-300 px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50 shadow-sm">
-            <div class="flex items-center gap-3 sm:gap-4 w-full">
-                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-serif font-bold text-lg sm:text-xl shadow-md shrink-0">T</div>
-                <div>
-                    <h2 class="text-lg sm:text-xl font-bold text-gray-800 leading-tight">Juega con tus Cartones</h2>
-                    <p class="firebase-status text-[10px] sm:text-xs text-gray-400 font-medium">● Sincronizando...</p>
-                </div>
+    <!-- MODAL DE CUENTAS (ADMIN) -->
+    <div id="adminAccountsModal" class="hidden fixed inset-0 bg-black/80 z-[200] flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-casino-panel border border-casino-border rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-casino-border flex justify-between items-center bg-casino-dark rounded-t-xl">
+                <h2 class="text-white text-xl font-bold">Gestor de Jugadores y Créditos</h2>
+                <button onclick="window.hideAccountsModal()" class="text-gray-400 hover:text-white text-3xl leading-none transition-colors">&times;</button>
             </div>
             
-            <div class="flex gap-2 w-full sm:w-auto">
-                <select id="colorFilter" onchange="window.filterCards()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full sm:w-auto p-2 sm:p-2.5 outline-none">
-                    <option value="all">Todos los colores</option>
-                    <option value="rojo">Rojo Carmesí</option>
-                    <option value="amarillo">Ámbar Dorado</option>
-                    <option value="verde">Verde Esmeralda</option>
-                    <option value="azul">Azul Zafiro</option>
-                </select>
+            <!-- Asignar/Editar créditos -->
+            <div class="p-4 border-b border-casino-border bg-slate-800 flex flex-col sm:flex-row gap-4 items-end">
+                <div class="w-full sm:w-1/4">
+                    <label class="block text-xs text-gray-400 uppercase tracking-widest mb-1">Usuario</label>
+                    <input type="text" id="genAccountUser" class="w-full bg-casino-dark border border-gray-600 rounded-lg p-2 text-white text-center" placeholder="Ej. juan">
+                </div>
+                <div class="w-full sm:w-1/4">
+                    <label class="block text-xs text-gray-400 uppercase tracking-widest mb-1">Contraseña</label>
+                    <input type="text" id="genAccountPass" class="w-full bg-casino-dark border border-gray-600 rounded-lg p-2 text-white text-center" placeholder="Clave">
+                </div>
+                <div class="w-full sm:w-1/4">
+                    <label class="block text-xs text-gray-400 uppercase tracking-widest mb-1">Créditos</label>
+                    <input type="number" id="genAccountCredits" value="1" min="1" max="150" class="w-full bg-casino-dark border border-gray-600 rounded-lg p-2 text-white text-center">
+                </div>
+                <div class="w-full sm:w-1/4 flex gap-2">
+                    <button onclick="window.assignCredits()" class="flex-1 py-2 bg-casino-gold text-white rounded-lg font-bold hover:bg-yellow-600 transition-colors">
+                        <span id="btnAssignText">Crear / Sumar</span>
+                    </button>
+                    <button id="btnCancelEdit" onclick="window.cancelEdit()" class="hidden py-2 px-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-500 transition-colors" title="Cancelar Edición">
+                        &times;
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-4 overflow-y-auto flex-grow" id="accountsGrid">
+                <!-- Se inyectan las cuentas aquí -->
+            </div>
+            <div class="p-4 border-t border-casino-border bg-casino-dark rounded-b-xl flex justify-between items-center">
+                <span class="text-gray-400 text-xs italic">Crea un usuario y contraseña para que el jugador elija sus cartones. Total máx: 150 créditos.</span>
+                <span id="totalCreditsCounter" class="text-casino-gold font-bold text-sm">Créditos asignados: 0/150</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA DE TARJETAS / CARTONES -->
+    <div id="cardsScreen" class="hidden h-screen w-full flex-col bg-slate-100 overflow-y-auto">
+        <header class="bg-white border-b border-gray-300 px-4 sm:px-6 py-4 flex flex-col gap-4 sticky top-0 z-50 shadow-sm">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div class="flex items-center gap-3 sm:gap-4 w-full">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-serif font-bold text-lg sm:text-xl shadow-md shrink-0">T</div>
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-gray-800 leading-tight">Juega con tus Cartones</h2>
+                        <p class="firebase-status text-[10px] sm:text-xs text-gray-400 font-medium">● Sincronizando...</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <select id="colorFilter" onchange="window.filterCards()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full sm:w-auto p-2 sm:p-2.5 outline-none">
+                        <option value="all">Todos los colores</option>
+                        <option value="rojo">Rojo Carmesí</option>
+                        <option value="amarillo">Ámbar Dorado</option>
+                        <option value="verde">Verde Esmeralda</option>
+                        <option value="azul">Azul Zafiro</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Panel de Jugador Activo -->
+            <div id="activePlayerPanel" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex justify-between items-center">
+                <div>
+                    <span class="text-xs font-bold text-emerald-700 uppercase tracking-widest block">Sesión Activa</span>
+                    <span class="text-sm font-semibold text-gray-800">Usuario: <span id="activePlayerUserDisplay" class="font-bold text-emerald-700"></span></span>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-gray-500">Créditos</div>
+                    <div id="activePlayerCreditsDisplay" class="text-lg font-black text-emerald-600">0/0</div>
+                </div>
+                <button onclick="window.logoutPlayer()" class="ml-4 px-3 py-1 bg-white border border-gray-300 text-gray-600 rounded text-xs font-bold hover:bg-gray-100 transition-colors">Cerrar Sesión</button>
             </div>
         </header>
         
@@ -294,7 +457,7 @@
     <!-- SCRIPT TIPO MÓDULO PARA IMPORTAR FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         let firebaseConfig;
@@ -330,18 +493,24 @@
 
         const MAX_BALLS = 90;
         let gameState = {
+            isGameStarted: false, // Nuevo estado
             drawnNumbers: [],
             currentNumber: null,
-            selectedCards: [],
-            winners: []
+            selectedCards: {}, // { cardIdx: "accountId" }
+            winners: [], // array de objetos [{cardIdx}]
+            accounts: {} // { "acc_123": { username: "Juan", usernameLower: "juan", password: "123", totalCredits: 5, usedCredits: 0, cards: [] } }
         };
 
         const globalCardsData = {};
         let currentUser = null;
+        
+        // Estado local del jugador (Cambiado a UID de cuenta para permitir usuarios repetidos)
+        let localPlayerAccountId = sessionStorage.getItem('bingoPlayerAccountId') || null;
+        let editingAccountId = null; // Variable para saber si el admin está editando
 
         // --- EFECTOS DE SONIDO ---
-        const sndPop = new Audio('https://actions.google.com/sounds/v1/ui/message_alert.ogg'); // Sonido más elegante para bola
-        const sndWin = new Audio('https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg'); // Sonido mágico y agradable para ganador
+        const sndPop = new Audio('https://actions.google.com/sounds/v1/ui/message_alert.ogg'); 
+        const sndWin = new Audio('https://actions.google.com/sounds/v1/cartoon/magic_chime.ogg'); 
         const sndClick = new Audio('https://actions.google.com/sounds/v1/ui/button_click.ogg');
 
         let initialLoadDone = false;
@@ -398,10 +567,12 @@
                     const previousDrawnCount = gameState.drawnNumbers.length;
                     const previousWinnerCount = gameState.winners.length;
 
+                    gameState.isGameStarted = data.isGameStarted || false;
                     gameState.drawnNumbers = data.drawnNumbers || [];
                     gameState.currentNumber = data.currentNumber || null;
-                    gameState.selectedCards = data.selectedCards || [];
+                    gameState.selectedCards = data.selectedCards || {};
                     gameState.winners = data.winners || [];
+                    gameState.accounts = data.accounts || {}; 
                     
                     if (initialLoadDone) {
                         if (gameState.drawnNumbers.length > previousDrawnCount) {
@@ -411,6 +582,8 @@
                         if (gameState.winners.length > previousWinnerCount) {
                             sndWin.currentTime = 0;
                             sndWin.play().catch(() => {});
+                            // Detener el modo automático si hay un ganador
+                            if (autoDrawInterval) window.toggleAutoDraw();
                         }
                     } else {
                         initialLoadDone = true;
@@ -449,7 +622,6 @@
             if (hash === 'public' || hash === 'admin' || hash === 'cards') {
                 initMode(hash);
             } else {
-                // Si no hay modo en la URL, mostramos la pantalla de selección principal
                 document.getElementById('selectionScreen').classList.remove('hidden');
                 document.getElementById('selectionScreen').classList.add('flex');
             }
@@ -464,49 +636,306 @@
                 document.getElementById('publicScreen').classList.add('flex');
                 updateAllUIs();
             } else if (mode === 'admin') {
-                const pass = prompt("Ingrese la contraseña de administrador:");
-                if(pass !== "d5720") {
-                    alert("Contraseña incorrecta. Acceso denegado.");
-                    window.location.hash = '';
-                    location.reload();
-                    return;
-                }
-                document.getElementById('adminScreen').classList.remove('hidden');
-                document.getElementById('adminScreen').classList.add('flex');
-                initGrid90('adminGrid');
-                updateAllUIs();
+                window.openAdminPrompt();
+                return;
             } else if (mode === 'cards') {
                 document.getElementById('cardsScreen').classList.remove('hidden');
                 document.getElementById('cardsScreen').classList.add('flex');
                 generate150CardsUI();
                 updateAllUIs();
+                
+                // Mostrar formulario de ingreso automáticamente si no hay sesión activa
+                if (!localPlayerAccountId) {
+                    window.promptLogin();
+                }
             }
         }
 
         function checkForWinners() {
             if (!gameState.winners) gameState.winners = [];
             let newWinners = [];
+            let winnerFound = false;
             
-            gameState.selectedCards.forEach(cardIdx => {
+            Object.keys(gameState.selectedCards || {}).forEach(cardIdxStr => {
+                const cardIdx = parseInt(cardIdxStr);
                 const cardData = globalCardsData[cardIdx];
+                
                 if(cardData) {
                     const isWinner = cardData.flatNumbers.every(num => gameState.drawnNumbers.includes(num));
-                    if (isWinner && !gameState.winners.includes(cardIdx)) {
-                        newWinners.push(cardIdx);
+                    const alreadyWinner = gameState.winners.some(w => w.cardIdx === cardIdx);
+                    
+                    if (isWinner && !alreadyWinner) {
+                        newWinners.push({ cardIdx });
+                        winnerFound = true;
                     }
                 }
             });
 
-            if (newWinners.length > 0) {
+            if (winnerFound) {
                 gameState.winners.push(...newWinners);
                 return true;
             }
             return false;
         }
 
-        window.drawNumber = function() {
+        // --- FUNCIONES DE MODALES PERSONALIZADOS ---
+        let confirmAction = null;
+        let pendingCardSelection = null;
+
+        window.customAlert = function(title, message) {
+            document.getElementById('customAlertTitle').textContent = title;
+            document.getElementById('customAlertMessage').textContent = message;
+            document.getElementById('customAlertModal').classList.remove('hidden');
+            document.getElementById('customAlertModal').classList.add('flex');
+        }
+
+        window.customConfirm = function(title, message, action) {
+            document.getElementById('customConfirmTitle').textContent = title;
+            document.getElementById('customConfirmMessage').textContent = message;
+            confirmAction = action;
+            document.getElementById('customConfirmModal').classList.remove('hidden');
+            document.getElementById('customConfirmModal').classList.add('flex');
+        }
+
+        window.closeConfirm = function() {
+            document.getElementById('customConfirmModal').classList.add('hidden');
+            document.getElementById('customConfirmModal').classList.remove('flex');
+            confirmAction = null;
+        }
+
+        window.executeConfirm = function() {
+            if (confirmAction) confirmAction();
+            window.closeConfirm();
+        }
+
+        // --- LÓGICA DE CLAVE ADMIN ---
+        window.openAdminPrompt = function() {
+            document.getElementById('adminPassInput').value = '';
+            document.getElementById('adminPassError').classList.add('hidden');
+            document.getElementById('adminPassModal').classList.remove('hidden');
+            document.getElementById('adminPassModal').classList.add('flex');
+            setTimeout(() => document.getElementById('adminPassInput').focus(), 100);
+        }
+
+        window.cancelAdminPass = function() {
+            document.getElementById('adminPassModal').classList.add('hidden');
+            document.getElementById('adminPassModal').classList.remove('flex');
+            window.location.hash = ''; 
+            document.getElementById('selectionScreen').classList.remove('hidden');
+            document.getElementById('selectionScreen').classList.add('flex');
+        }
+
+        window.verifyAdminPass = function() {
+            const pass = document.getElementById('adminPassInput').value;
+            if(pass !== "d5720") {
+                document.getElementById('adminPassError').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('adminPassModal').classList.add('hidden');
+            document.getElementById('adminPassModal').classList.remove('flex');
+            
+            document.getElementById('adminScreen').classList.remove('hidden');
+            document.getElementById('adminScreen').classList.add('flex');
+            initGrid90('adminGrid');
+            updateAllUIs();
+        }
+
+        // --- SISTEMA DE ASIGNACIÓN Y EDICIÓN DE CRÉDITOS ---
+        window.editAccount = function(accountId) {
+            const acc = gameState.accounts[accountId];
+            if (!acc) return;
+            
+            editingAccountId = accountId;
+            document.getElementById('genAccountUser').value = acc.username;
+            document.getElementById('genAccountPass').value = acc.password;
+            document.getElementById('genAccountCredits').value = acc.totalCredits;
+            
+            document.getElementById('btnAssignText').textContent = 'Guardar';
+            document.getElementById('btnCancelEdit').classList.remove('hidden');
+        }
+
+        window.cancelEdit = function() {
+            editingAccountId = null;
+            document.getElementById('genAccountUser').value = '';
+            document.getElementById('genAccountPass').value = '';
+            document.getElementById('genAccountCredits').value = '1';
+            
+            document.getElementById('btnAssignText').textContent = 'Crear / Sumar';
+            document.getElementById('btnCancelEdit').classList.add('hidden');
+        }
+
+        window.assignCredits = async function() {
+            const username = document.getElementById('genAccountUser').value.trim();
+            const password = document.getElementById('genAccountPass').value.trim();
+            const credits = parseInt(document.getElementById('genAccountCredits').value);
+            
+            if (!username || !password || isNaN(credits) || credits < 1) {
+                window.customAlert("Error", "Ingresa usuario, contraseña y una cantidad válida de créditos.");
+                return;
+            }
+
+            const usernameLower = username.toLowerCase();
+
+            // Validar que no se excedan los 150 cartones del juego en total
+            let totalAssigned = 0;
+            if (gameState.accounts) {
+                Object.entries(gameState.accounts).forEach(([id, acc]) => {
+                    if (id !== editingAccountId) {
+                        totalAssigned += acc.totalCredits;
+                    }
+                });
+            }
+
+            if (totalAssigned + credits > 150) {
+                window.customAlert("Límite superado", `Máximo 150 cartones en total. Solo quedan ${150 - totalAssigned} disponibles.`);
+                return;
+            }
+
+            const updatePayload = {};
+
+            if (editingAccountId) {
+                // MODO EDICIÓN
+                const acc = gameState.accounts[editingAccountId];
+                if (credits < acc.usedCredits) {
+                    window.customAlert("Error", `El jugador ya usó ${acc.usedCredits} cartones. No puedes asignarle menos que eso.`);
+                    return;
+                }
+                updatePayload[`accounts.${editingAccountId}.username`] = username;
+                updatePayload[`accounts.${editingAccountId}.usernameLower`] = usernameLower;
+                updatePayload[`accounts.${editingAccountId}.password`] = password;
+                updatePayload[`accounts.${editingAccountId}.totalCredits`] = credits;
+            } else {
+                // MODO CREACIÓN (Si el usuario+pass ya existe, se suman. Si no, se crea nueva cuenta)
+                let existingId = null;
+                if (gameState.accounts) {
+                    existingId = Object.keys(gameState.accounts).find(id => 
+                        gameState.accounts[id].usernameLower === usernameLower && 
+                        gameState.accounts[id].password === password
+                    );
+                }
+
+                if (existingId) {
+                    updatePayload[`accounts.${existingId}.totalCredits`] = gameState.accounts[existingId].totalCredits + credits;
+                } else {
+                    const newId = 'acc_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                    updatePayload[`accounts.${newId}`] = { 
+                        username: username,
+                        usernameLower: usernameLower,
+                        password: password, 
+                        totalCredits: credits, 
+                        usedCredits: 0, 
+                        cards: [] 
+                    };
+                }
+            }
+
+            try {
+                if (currentUser) {
+                    await updateDoc(gameDocRef, updatePayload);
+                }
+                window.customAlert("Éxito", editingAccountId ? "Jugador actualizado." : "Créditos asignados correctamente.");
+                window.cancelEdit();
+            } catch (e) {
+                console.error("Error al actualizar cuenta:", e);
+                // Fallback local por si acaso
+                if (!gameState.accounts) gameState.accounts = {};
+                // Para mantenerlo robusto dependemos primariamente de Firebase, pero si falla lo atrapamos.
+            }
+        }
+
+        window.deleteAccount = async function(accountId) {
+            window.customConfirm(
+                "Eliminar Jugador",
+                "¿Seguro que deseas eliminar a este jugador? Se liberarán todos sus cartones.",
+                async () => {
+                    const acc = gameState.accounts[accountId];
+                    if (!acc) return;
+
+                    const updatePayload = {};
+                    updatePayload[`accounts.${accountId}`] = deleteField();
+                    if (acc.cards) {
+                        acc.cards.forEach(cardIdx => {
+                            updatePayload[`selectedCards.${cardIdx}`] = deleteField();
+                        });
+                    }
+
+                    try {
+                        if (currentUser) {
+                            await updateDoc(gameDocRef, updatePayload);
+                        } else {
+                            delete gameState.accounts[accountId];
+                            acc.cards?.forEach(c => delete gameState.selectedCards[c]);
+                            broadcastState();
+                        }
+                        window.cancelEdit(); // Limpia los inputs por si acaso lo estaba editando
+                        window.customAlert("Éxito", "Jugador eliminado y cartones liberados.");
+                    } catch (err) {
+                        console.error("Error eliminando cuenta:", err);
+                    }
+                }
+            );
+        }
+
+        window.startGame = async function() {
+            gameState.isGameStarted = true;
+            try {
+                if (currentUser) {
+                    await updateDoc(gameDocRef, { isGameStarted: true });
+                }
+                updateAllUIs();
+                window.customAlert("Juego Iniciado", "El sorteo ha comenzado. Ya puedes sacar bolas y los jugadores solo verán sus cartones.");
+            } catch (e) {
+                broadcastState();
+            }
+        }
+
+        let autoDrawInterval = null;
+
+        window.toggleAutoDraw = function() {
+            const btn = document.getElementById('btnAutoDraw');
+            
+            if (autoDrawInterval) {
+                // Detener Automático
+                clearInterval(autoDrawInterval);
+                autoDrawInterval = null;
+                btn.textContent = "Automático";
+                btn.classList.remove('bg-red-600', 'hover:bg-red-500', 'shadow-[0_0_20px_rgba(220,38,38,0.4)]');
+                btn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+            } else {
+                // Iniciar Automático
+                if (!gameState.isGameStarted) {
+                    window.startGame(); // Inicia el juego si no lo estaba
+                }
+                
+                // Sacamos una bola inmediatamente
+                if (gameState.drawnNumbers.length < MAX_BALLS && gameState.winners.length === 0) {
+                     window.drawNumber();
+                }
+
+                autoDrawInterval = setInterval(() => {
+                    if (gameState.drawnNumbers.length >= MAX_BALLS || (gameState.winners && gameState.winners.length > 0)) {
+                        window.toggleAutoDraw(); // Se detiene solo si termina o hay ganador
+                        return;
+                    }
+                    window.drawNumber();
+                }, 4000); // 4 segundos entre cada bola (ajusta este número si quieres que sea más rápido o lento)
+                
+                btn.textContent = "Detener";
+                btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+                btn.classList.add('bg-red-600', 'hover:bg-red-500', 'shadow-[0_0_20px_rgba(220,38,38,0.4)]');
+            }
+        }
+
+        window.drawNumber = async function() {
+            if (!gameState.isGameStarted) {
+                window.customAlert("Atención", "Debes dar inicio al juego antes de empezar a sacar bolas.");
+                if (autoDrawInterval) window.toggleAutoDraw();
+                return;
+            }
+
             if (gameState.drawnNumbers.length >= MAX_BALLS) {
-                alert("¡Se han sacado todas las bolas!");
+                window.customAlert("Fin del Sorteo", "¡Se han sacado todas las bolas posibles!");
+                if (autoDrawInterval) window.toggleAutoDraw();
                 return;
             }
 
@@ -519,21 +948,38 @@
             gameState.drawnNumbers.push(newNum);
 
             checkForWinners(); 
-            broadcastState(); 
-            updateAllUIs();
+            
+            try {
+                const updatePayload = {
+                    currentNumber: newNum,
+                    drawnNumbers: gameState.drawnNumbers,
+                    winners: gameState.winners
+                };
+                await updateDoc(gameDocRef, updatePayload);
+            } catch (e) {
+                broadcastState(); 
+            }
         }
 
         window.resetGame = function() {
-            if(confirm("¿Estás seguro de que deseas reiniciar la partida actual para todos los jugadores de internet?")) {
-                gameState = {
-                    drawnNumbers: [],
-                    currentNumber: null,
-                    selectedCards: [],
-                    winners: []
-                };
-                broadcastState(); 
-                updateAllUIs();
-            }
+            window.customConfirm(
+                "Reiniciar Partida", 
+                "¿Deseas reiniciar la partida para todos? Se borrarán los cartones, los números y TODAS las cuentas de jugadores registradas.", 
+                () => {
+                    if (autoDrawInterval) window.toggleAutoDraw(); // Detener auto si estaba corriendo
+                    
+                    gameState = {
+                        isGameStarted: false,
+                        drawnNumbers: [],
+                        currentNumber: null,
+                        selectedCards: {},
+                        winners: [],
+                        accounts: {} // Borrar todas las cuentas
+                    };
+                    broadcastState(); 
+                    updateAllUIs();
+                }
+            );
         }
 
         function updateAllUIs() {
@@ -593,7 +1039,6 @@
                 container.classList.remove('flex');
             }
 
-            // AQUI SE CREAN LAS BOLAS SORTEADAS ESTILO IMAGEN (Círculos oscuros)
             const drawnBallsContainer = document.getElementById('publicDrawnBalls');
             if (drawnBallsContainer) {
                 drawnBallsContainer.innerHTML = '';
@@ -603,7 +1048,6 @@
                 } else {
                     gameState.drawnNumbers.forEach(num => {
                         const pill = document.createElement('div');
-                        // Clases para que luzca exactamente como la imagen image_88878e.png
                         pill.className = 'w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 rounded-full text-white font-bold text-xl sm:text-3xl flex items-center justify-center shadow-md shrink-0';
                         pill.textContent = num;
                         drawnBallsContainer.appendChild(pill);
@@ -618,6 +1062,49 @@
 
             const container = document.getElementById('adminMainBallContainer');
             const waiting = document.getElementById('adminWaitingMessage');
+            const drawButtonsContainer = document.getElementById('drawButtonsContainer');
+            const startGameBanner = document.getElementById('startGameBanner');
+            const btnForceStart = document.getElementById('btnForceStart');
+
+            // --- Lógica del Estado de Inicio de Juego ---
+            let totalCredits = 0;
+            let usedCredits = 0;
+            if (gameState.accounts) {
+                Object.values(gameState.accounts).forEach(acc => {
+                    totalCredits += acc.totalCredits;
+                    usedCredits += acc.usedCredits;
+                });
+            }
+
+            if (gameState.isGameStarted) {
+                // Juego iniciado: Mostrar botón de sacar bola, ocultar banners y botón de forzar
+                startGameBanner.classList.add('hidden');
+                startGameBanner.classList.remove('flex');
+                drawButtonsContainer.classList.remove('hidden');
+                drawButtonsContainer.classList.add('flex');
+                btnForceStart.classList.add('hidden');
+            } else {
+                // Juego NO iniciado: Ocultar sacar bola
+                drawButtonsContainer.classList.add('hidden');
+                drawButtonsContainer.classList.remove('flex');
+                
+                // Mostrar botón de forzar inicio si hay al menos 1 crédito repartido
+                if (totalCredits > 0) {
+                    btnForceStart.classList.remove('hidden');
+                } else {
+                    btnForceStart.classList.add('hidden');
+                }
+
+                // Mostrar el Banner Gigante SOLO si todos los créditos repartidos se han usado
+                if (totalCredits > 0 && totalCredits === usedCredits) {
+                    startGameBanner.classList.remove('hidden');
+                    startGameBanner.classList.add('flex');
+                    btnForceStart.classList.add('hidden'); // Ocultar el pequeño porque ya está el grande
+                } else {
+                    startGameBanner.classList.add('hidden');
+                    startGameBanner.classList.remove('flex');
+                }
+            }
             
             if (gameState.currentNumber) {
                 waiting.classList.add('hidden');
@@ -668,10 +1155,75 @@
             const winnerAlert = document.getElementById('adminWinnerAlert');
             if (gameState.winners && gameState.winners.length > 0) {
                 winnerAlert.classList.remove('hidden');
-                document.getElementById('adminWinnerCardsText').textContent = gameState.winners.join(', ');
+                document.getElementById('adminWinnerCardsText').textContent = gameState.winners.map(w => w.cardIdx).join(', ');
             } else {
                 winnerAlert.classList.add('hidden');
             }
+
+            // Actualizar vista de cuentas si el modal está abierto
+            if (!document.getElementById('adminAccountsModal').classList.contains('hidden')) {
+                renderAccountsGrid();
+            }
+        }
+
+        // --- LÓGICA DEL PANEL DE CUENTAS DEL ADMIN ---
+        window.showAccountsModal = function() {
+            document.getElementById('adminAccountsModal').classList.remove('hidden');
+            document.getElementById('adminAccountsModal').classList.add('flex');
+            renderAccountsGrid();
+        }
+
+        window.hideAccountsModal = function() {
+            document.getElementById('adminAccountsModal').classList.add('hidden');
+            document.getElementById('adminAccountsModal').classList.remove('flex');
+        }
+
+        function renderAccountsGrid() {
+            const grid = document.getElementById('accountsGrid');
+            grid.innerHTML = '';
+            
+            let totalAssigned = 0;
+
+            if (!gameState.accounts || Object.keys(gameState.accounts).length === 0) {
+                grid.innerHTML = '<div class="text-center py-10 w-full col-span-full"><p class="text-gray-400 mb-4">No hay jugadores registrados. Añade uno arriba.</p></div>';
+                document.getElementById('totalCreditsCounter').textContent = `Créditos asignados: 0/150`;
+                return;
+            }
+
+            const container = document.createElement('div');
+            container.className = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 w-full";
+
+            Object.entries(gameState.accounts).forEach(([accountId, info]) => {
+                totalAssigned += info.totalCredits;
+
+                const box = document.createElement('div');
+                const isFull = info.usedCredits >= info.totalCredits;
+                
+                let htmlContent = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="block text-white font-bold text-lg truncate pr-2" title="${info.username}">${info.username}</span>
+                        <div class="flex gap-2 shrink-0 bg-casino-dark px-2 py-1 rounded">
+                            <button onclick="window.editAccount('${accountId}')" class="text-blue-400 hover:text-blue-300 transition-colors" title="Editar">✏️</button>
+                            <button onclick="window.deleteAccount('${accountId}')" class="text-red-400 hover:text-red-300 transition-colors" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>
+                    <span class="block text-xs text-gray-300 font-mono mb-1">Pass: ${info.password}</span>`;
+
+                if (isFull) {
+                    box.className = "p-3 bg-red-900/50 border border-red-700 rounded text-left opacity-80 shadow-lg";
+                    box.innerHTML = htmlContent + `<span class="block text-xs text-red-300 font-bold mt-2">Agotado (${info.usedCredits}/${info.totalCredits})</span>`;
+                } else if (info.usedCredits > 0) {
+                    box.className = "p-3 bg-yellow-900/40 border border-yellow-600 rounded text-left shadow-lg";
+                    box.innerHTML = htmlContent + `<span class="block text-xs text-yellow-200 font-bold mt-2">En uso (${info.usedCredits}/${info.totalCredits})</span>`;
+                } else {
+                    box.className = "p-3 bg-emerald-900/40 border border-emerald-600 rounded text-left shadow-inner shadow-lg";
+                    box.innerHTML = htmlContent + `<span class="block text-xs text-emerald-200 font-bold mt-2">Libre (${info.usedCredits}/${info.totalCredits})</span>`;
+                }
+                container.appendChild(box);
+            });
+
+            grid.appendChild(container);
+            document.getElementById('totalCreditsCounter').textContent = `Créditos asignados: ${totalAssigned}/150`;
         }
 
         // Overlay gigante que se muestra en CUALQUIER pantalla si hay ganador
@@ -684,12 +1236,14 @@
                 const winnerContainer = document.getElementById('globalWinnerCards');
                 winnerContainer.innerHTML = '';
                 
-                gameState.winners.forEach(cardIdx => {
-                    const cardData = globalCardsData[cardIdx];
+                gameState.winners.forEach(winnerInfo => {
+                    const cardData = globalCardsData[winnerInfo.cardIdx];
                     if (cardData) {
-                        const cardHTML = buildCardHTML(cardData.matrix, cardIdx, cardData.theme);
+                        const cardHTML = buildCardHTML(cardData.matrix, winnerInfo.cardIdx, cardData.theme);
+                        
                         const wrapper = document.createElement('div');
-                        wrapper.className = `bingo-card shadow-[0_0_40px_rgba(245,158,11,0.6)] transform scale-90 md:scale-110 pointer-events-none rounded-lg w-full max-w-[600px] relative mx-auto my-4`;
+                        // Se agregaron los max-w para que el cartón mantenga su proporción y no se aplaste
+                        wrapper.className = `bingo-card ${cardData.theme.id} relative w-full max-w-[320px] sm:max-w-[450px] md:max-w-[550px] shrink-0 mx-auto`;
                         wrapper.innerHTML = cardHTML;
 
                         wrapper.querySelectorAll('.card-cell').forEach(cell => {
@@ -840,22 +1394,227 @@
             `;
         }
 
-        window.selectCard = function(index) {
-            sndClick.currentTime = 0;
-            sndClick.play().catch(() => {});
+        window.promptLogin = function(index = null) {
+            pendingCardSelection = index;
+            if (index !== null) {
+                document.getElementById('loginMsg').textContent = `Inicia sesión para reclamar este cartón.`;
+            } else {
+                document.getElementById('loginMsg').textContent = `Ingresa tu usuario y contraseña para jugar.`;
+            }
+            const userInput = document.getElementById('userEntryInput');
+            const passInput = document.getElementById('passEntryInput');
+            userInput.value = '';
+            passInput.value = '';
+            passInput.type = 'password';
+            document.getElementById('eyeIconClosed').classList.remove('hidden');
+            document.getElementById('eyeIconOpen').classList.add('hidden');
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('loginModal').classList.add('flex');
+            setTimeout(() => userInput.focus(), 100);
+        }
 
-            if (!gameState.selectedCards) gameState.selectedCards = [];
+        window.selectCard = async function(index) {
+            if (!gameState.selectedCards) gameState.selectedCards = {};
             
-            if (!gameState.selectedCards.includes(index)) {
-                gameState.selectedCards.push(index);
+            // Verificación si el juego ya inició
+            if (gameState.isGameStarted) {
+                window.customAlert("Juego Iniciado", "El sorteo ya ha comenzado. ¡Concéntrate en tus cartones!");
+                return;
+            }
+
+            // Verificación inicial local
+            if (gameState.selectedCards[index]) {
+                if (gameState.selectedCards[index] === localPlayerAccountId) {
+                    window.customAlert("Mi Cartón", "Ya tienes este cartón seleccionado en tu sesión.");
+                } else {
+                    window.customAlert("Cartón Reservado", "Este cartón ya ha sido reservado por otro jugador.");
+                }
+                return;
+            }
+
+            // Si el jugador NO tiene sesión activa localmente, pedir usuario/pass
+            if (!localPlayerAccountId) {
+                window.promptLogin(index);
+                return;
+            }
+
+            // Validar si la cuenta existe y tiene créditos
+            const accountInfo = gameState.accounts && gameState.accounts[localPlayerAccountId];
+            if (!accountInfo) {
+                window.customAlert("Sesión Caducada", "Tu cuenta ya no es válida o la partida se reinició.");
+                window.logoutPlayer();
+                return;
+            }
+
+            if (accountInfo.usedCredits >= accountInfo.totalCredits) {
+                window.customAlert("Sin Créditos", `Has agotado tus ${accountInfo.totalCredits} créditos. Pide más al administrador.`);
+                return;
+            }
+
+            // Evitar doble clics rápidos
+            if (window.isClaimingCard) return;
+            window.isClaimingCard = true;
+
+            try {
+                // Verificación estricta a la base de datos en tiempo real
+                if (currentUser) {
+                    const snap = await getDoc(gameDocRef);
+                    if (snap.exists()) {
+                        const latestData = snap.data();
+                        if (latestData.selectedCards && latestData.selectedCards[index]) {
+                            window.customAlert("Cartón Reservado", "¡Uy! Este cartón justo acaba de ser reservado por alguien más.");
+                            window.isClaimingCard = false;
+                            return;
+                        }
+                    }
+                }
+
+                sndClick.currentTime = 0;
+                sndClick.play().catch(() => {});
+
+                const currentUsed = accountInfo.usedCredits;
+                const currentCards = accountInfo.cards || [];
+                
+                const updatePayload = {};
+                updatePayload[`selectedCards.${index}`] = localPlayerAccountId;
+                updatePayload[`accounts.${localPlayerAccountId}.usedCredits`] = currentUsed + 1;
+                updatePayload[`accounts.${localPlayerAccountId}.cards`] = [...currentCards, index];
+
+                if (currentUser) {
+                    await updateDoc(gameDocRef, updatePayload);
+                }
+
+                // Actualizar la interfaz local
+                accountInfo.usedCredits++;
+                accountInfo.cards = [...currentCards, index];
+                gameState.selectedCards[index] = localPlayerAccountId;
+                
                 checkForWinners(); 
-                broadcastState(); 
+                updateAllUIs();
+
+            } catch (err) {
+                console.error("Error al reclamar:", err);
+                accountInfo.usedCredits++;
+                if (!accountInfo.cards) accountInfo.cards = [];
+                accountInfo.cards.push(index);
+                gameState.selectedCards[index] = localPlayerAccountId;
+                broadcastState();
+            }
+
+            window.isClaimingCard = false;
+        }
+
+        // --- LÓGICA DE VALIDACIÓN DE SESIÓN (JUGADOR) ---
+        window.togglePassVisibility = function() {
+            const input = document.getElementById('passEntryInput');
+            const iconClosed = document.getElementById('eyeIconClosed');
+            const iconOpen = document.getElementById('eyeIconOpen');
+
+            if (input.type === 'password') {
+                input.type = 'text'; 
+                iconClosed.classList.add('hidden');
+                iconOpen.classList.remove('hidden');
+            } else {
+                input.type = 'password';
+                iconClosed.classList.remove('hidden');
+                iconOpen.classList.add('hidden');
+            }
+        }
+
+        window.cancelLogin = function() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('flex');
+            
+            // Si el jugador cancela el login automático al apenas entrar al enlace:
+            if (pendingCardSelection === null && !localPlayerAccountId) {
+                // Intenta cerrar la pestaña/ventana del navegador actual
+                window.close();
+                
+                // Si el navegador bloquea el cierre (por seguridad), lo regresa al menú principal
+                window.location.hash = '';
+                document.getElementById('cardsScreen').classList.add('hidden');
+                document.getElementById('cardsScreen').classList.remove('flex');
+                document.getElementById('selectionScreen').classList.remove('hidden');
+                document.getElementById('selectionScreen').classList.add('flex');
+            }
+
+            pendingCardSelection = null;
+        }
+
+        window.confirmLogin = function() {
+            const inputUser = document.getElementById('userEntryInput').value.trim();
+            const inputPass = document.getElementById('passEntryInput').value.trim();
+            const errorEl = document.getElementById('loginError');
+
+            if (!inputUser || !inputPass) {
+                errorEl.textContent = "Debes ingresar tu usuario y contraseña.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const inputUserLower = inputUser.toLowerCase();
+            let foundAccountId = null;
+
+            if (gameState.accounts) {
+                // Buscamos ignorando mayúsculas/minúsculas en el usuario, pero estricto en la contraseña
+                for (const [id, acc] of Object.entries(gameState.accounts)) {
+                    if (acc.usernameLower === inputUserLower && acc.password === inputPass) {
+                        foundAccountId = id;
+                        break;
+                    }
+                }
+            }
+
+            if (!foundAccountId) {
+                errorEl.textContent = "Usuario o contraseña incorrectos.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            localPlayerAccountId = foundAccountId;
+            sessionStorage.setItem('bingoPlayerAccountId', localPlayerAccountId);
+
+            errorEl.classList.add('hidden');
+            window.cancelLogin(); 
+
+            if (pendingCardSelection !== null) {
+                window.selectCard(pendingCardSelection);
+                pendingCardSelection = null;
+            } else {
                 updateAllUIs();
             }
         }
 
+        window.logoutPlayer = function() {
+            localPlayerAccountId = null;
+            sessionStorage.removeItem('bingoPlayerAccountId');
+            updateAllUIs();
+        }
+
         function updateUICards() {
             const cardsContainer = document.getElementById('cardsContainer');
+            const playerPanel = document.getElementById('activePlayerPanel');
+            
+            if (localPlayerAccountId && gameState.accounts && !gameState.accounts[localPlayerAccountId]) {
+                window.logoutPlayer();
+                window.customAlert("Partida Reiniciada", "El administrador ha reiniciado el juego o tu cuenta fue eliminada. Tu sesión se ha cerrado.");
+                return;
+            }
+
+            // Actualizar panel de sesión activa
+            if (localPlayerAccountId && gameState.accounts && gameState.accounts[localPlayerAccountId]) {
+                playerPanel.classList.remove('hidden');
+                playerPanel.classList.add('flex');
+                
+                const info = gameState.accounts[localPlayerAccountId];
+                document.getElementById('activePlayerUserDisplay').textContent = info.username;
+                document.getElementById('activePlayerCreditsDisplay').textContent = `${info.totalCredits - info.usedCredits} disponibles`;
+            } else {
+                playerPanel.classList.add('hidden');
+                playerPanel.classList.remove('flex');
+            }
+
             if (cardsContainer) {
                 
                 cardsContainer.querySelectorAll('.card-cell.marked').forEach(el => {
@@ -881,22 +1640,49 @@
                     });
                 });
 
-                if (!gameState.selectedCards) gameState.selectedCards = [];
+                if (!gameState.selectedCards) gameState.selectedCards = {};
                 for (let i = 1; i <= 150; i++) {
                     const cardWrap = document.getElementById(`card-wrap-${i}`);
                     if (cardWrap) {
                         const overlay = cardWrap.querySelector('.card-overlay');
-                        if (gameState.selectedCards.includes(i)) {
-                            overlay.classList.remove('hidden');
-                            overlay.classList.add('flex');
+                        const overlayText = overlay.querySelector('div'); 
+                        
+                        cardWrap.dataset.owner = gameState.selectedCards[i] || '';
+
+                        if (gameState.selectedCards[i]) {
                             cardWrap.classList.remove('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
+                            
+                            if (gameState.selectedCards[i] === localPlayerAccountId) {
+                                // MI CARTÓN: Fondo transparente y etiqueta pequeña en la esquina para no tapar los números
+                                overlay.classList.remove('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                overlay.classList.add('flex', 'bg-transparent', 'pointer-events-none');
+                                
+                                overlayText.textContent = "✓ MI CARTÓN";
+                                overlayText.className = "absolute top-1 right-1 sm:top-2 sm:right-2 bg-emerald-600 text-white font-bold text-[10px] sm:text-xs px-2 py-1 rounded shadow-md pointer-events-auto border border-emerald-400";
+                                
+                                cardWrap.setAttribute('onclick', `window.customAlert('Mi Cartón', 'Ya tienes este cartón seleccionado. ¡Mucha suerte!')`);
+                            } else {
+                                // CARTÓN DE OTRO JUGADOR: Oscurecido y bloqueado
+                                overlay.classList.remove('hidden', 'bg-transparent', 'pointer-events-none');
+                                overlay.classList.add('flex', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                
+                                overlayText.textContent = "RESERVADO";
+                                overlayText.className = "border-2 sm:border-4 border-red-500 text-red-500 font-black text-sm sm:text-xl lg:text-3xl px-3 py-1 sm:px-6 sm:py-2 rounded-xl -rotate-12 uppercase tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.4)] bg-casino-dark/90 relative pointer-events-auto";
+                                
+                                cardWrap.setAttribute('onclick', `window.customAlert('Cartón Reservado', 'Este cartón ya ha sido reservado por otro jugador.')`);
+                            }
                         } else {
-                            overlay.classList.add('hidden');
-                            overlay.classList.remove('flex');
+                            // CARTÓN LIBRE
+                            overlay.classList.remove('flex', 'bg-transparent', 'pointer-events-none');
+                            overlay.classList.add('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                            
                             cardWrap.classList.add('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
+                            cardWrap.setAttribute('onclick', `window.selectCard(${i})`);
                         }
                     }
                 }
+                
+                window.filterCards();
             }
         }
 
@@ -904,11 +1690,28 @@
             const filter = document.getElementById('colorFilter').value;
             const items = document.querySelectorAll('.card-item');
             
+            let showOnlyMyCards = false;
+            
+            // Regla: Si el juego ya inició, FORZAR a que todos vean solo sus cartas
+            if (gameState.isGameStarted) {
+                showOnlyMyCards = true;
+            } else if (localPlayerAccountId && gameState.accounts && gameState.accounts[localPlayerAccountId]) {
+                // Si aún no inicia, pero el jugador ya agotó sus créditos, también ve solo sus cartas
+                const info = gameState.accounts[localPlayerAccountId];
+                if (info.usedCredits >= info.totalCredits && info.totalCredits > 0) {
+                    showOnlyMyCards = true;
+                }
+            }
+
             items.forEach(item => {
-                if(filter === 'all' || item.classList.contains(filter)) {
-                    item.style.display = 'block';
+                const isMine = item.dataset.owner === localPlayerAccountId;
+                const matchesColor = filter === 'all' || item.classList.contains(filter);
+                
+                if (showOnlyMyCards) {
+                    // En modo restringido, debe ser tuyo Y coincidir con el color
+                    item.style.display = (isMine && matchesColor) ? 'block' : 'none';
                 } else {
-                    item.style.display = 'none';
+                    item.style.display = matchesColor ? 'block' : 'none';
                 }
             });
         }
