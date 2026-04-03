@@ -128,6 +128,14 @@
 
                 <!-- Controles Extra (Simplificado) -->
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 flex flex-col gap-4">
+                    <!-- Switcher Manual Movido Aquí -->
+                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <span class="text-xs font-semibold uppercase text-slate-500">Pantalla actual:</span>
+                        <button id="toggle-screen-btn" class="text-xs font-bold py-1.5 px-3 rounded-md transition-all bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+                            PUBLICIDAD
+                        </button>
+                    </div>
+
                     <button id="open-settings-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                         Ajustes de Pantalla y Música
@@ -234,8 +242,8 @@
                     <p id="public-ad-text" class="text-xl sm:text-2xl lg:text-4xl font-serif text-white font-medium drop-shadow-lg leading-tight">¡Bienvenidos al Gran Sorteo Loterix! Prepárate para ganar increíbles premios hoy.</p>
                 </div>
                 
-                <!-- Contenedor del Reproductor de Música/Video -->
-                <div class="flex-none lg:flex-1 bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden relative min-h-[250px] sm:min-h-[300px] lg:min-h-0">
+                <!-- Contenedor del Reproductor de Música/Video (pointer-events-none para que el público no interactúe) -->
+                <div class="flex-none lg:flex-1 bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden relative min-h-[250px] sm:min-h-[300px] lg:min-h-0 pointer-events-none">
                     <iframe id="public-playlist-iframe" class="w-full h-full border-0 absolute inset-0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                 </div>
             </div>
@@ -258,14 +266,6 @@
 
             <div class="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-5">
                 
-                <!-- Switcher Manual -->
-                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <span class="text-xs font-semibold uppercase text-slate-500">Modo Actual:</span>
-                    <button id="toggle-screen-btn" class="text-xs font-bold py-1.5 px-3 rounded-md transition-all bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
-                        Viendo: PUBLICIDAD
-                    </button>
-                </div>
-
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -395,13 +395,13 @@
             // Si es una Playlist pura
             let matchList = url.match(/[?&]list=([^#\&\?]+)/);
             if (matchList && !url.includes('watch')) {
-                return `https://www.youtube.com/embed/videoseries?list=${matchList[1]}&autoplay=1&enablejsapi=1`;
+                return `https://www.youtube.com/embed/videoseries?list=${matchList[1]}&autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
             }
 
             // Si es un Video de YouTube
             let matchVid = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
             if (matchVid) {
-                let base = `https://www.youtube.com/embed/${matchVid[1]}?autoplay=1&enablejsapi=1`;
+                let base = `https://www.youtube.com/embed/${matchVid[1]}?autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
                 if (matchList) {
                     base += `&list=${matchList[1]}`;
                 } else {
@@ -747,10 +747,10 @@
         function updateToggleBtnUI() {
             const btn = document.getElementById('toggle-screen-btn');
             if (showAdsData) {
-                btn.innerText = "Viendo: PUBLICIDAD";
+                btn.innerText = "PUBLICIDAD";
                 btn.className = "text-xs font-bold py-1.5 px-3 rounded-md transition-all bg-emerald-100 text-emerald-700 hover:bg-emerald-200";
             } else {
-                btn.innerText = "Viendo: TABLERO JUEGO";
+                btn.innerText = "TABLERO";
                 btn.className = "text-xs font-bold py-1.5 px-3 rounded-md transition-all bg-amber-100 text-amber-700 hover:bg-amber-200";
             }
         }
