@@ -134,7 +134,7 @@
         <div class="bg-casino-panel border border-casino-gold rounded-xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden p-6">
             <h3 class="text-white font-bold text-lg mb-2 text-center">Acceso Administrador</h3>
             <p class="text-gray-400 text-sm mb-4 text-center">Ingresa la contraseña de seguridad para entrar al panel de control.</p>
-            <input type="password" id="adminPassInput" class="w-full bg-casino-dark border border-gray-600 text-white rounded-lg p-3 text-center text-xl mb-2 focus:outline-none focus:border-casino-gold" placeholder="Contraseña">
+            <input type="password" id="adminPassInput" onkeydown="if(event.key === 'Enter') window.verifyAdminPass()" class="w-full bg-casino-dark border border-gray-600 text-white rounded-lg p-3 text-center text-xl mb-2 focus:outline-none focus:border-casino-gold" placeholder="Contraseña">
             <p id="adminPassError" class="text-red-400 text-xs text-center mb-4 hidden">Contraseña incorrecta.</p>
             <div class="flex gap-3">
                 <button onclick="window.cancelAdminPass()" class="flex-1 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-500 transition-colors">Cancelar</button>
@@ -154,11 +154,11 @@
 
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Usuario</label>
-                    <input type="text" id="userEntryInput" class="w-full border border-gray-300 rounded-lg p-3 text-center text-xl font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 mb-4" placeholder="Ej. juan" autocomplete="off">
+                    <input type="text" id="userEntryInput" onkeydown="if(event.key === 'Enter') document.getElementById('passEntryInput').focus()" class="w-full border border-gray-300 rounded-lg p-3 text-center text-xl font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 mb-4" placeholder="Ej. juan" autocomplete="off">
                     
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Contraseña</label>
                     <div class="relative">
-                        <input type="password" id="passEntryInput" class="w-full border border-gray-300 rounded-lg p-3 text-center text-xl font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200" placeholder="••••••" autocomplete="off">
+                        <input type="password" id="passEntryInput" onkeydown="if(event.key === 'Enter') window.confirmLogin()" class="w-full border border-gray-300 rounded-lg p-3 text-center text-xl font-bold text-gray-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200" placeholder="••••••" autocomplete="off">
                         <button type="button" onclick="window.togglePassVisibility()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-emerald-600 transition-colors">
                             <svg id="eyeIconClosed" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
@@ -944,10 +944,20 @@
                 newNum = Math.floor(Math.random() * MAX_BALLS) + 1;
             } while (gameState.drawnNumbers.includes(newNum));
 
+            // Reproducir sonido para el administrador inmediatamente
+            sndPop.currentTime = 0;
+            sndPop.play().catch(() => {});
+
             gameState.currentNumber = newNum;
             gameState.drawnNumbers.push(newNum);
 
-            checkForWinners(); 
+            let hasNewWinner = checkForWinners(); 
+            if (hasNewWinner) {
+                sndWin.currentTime = 0;
+                sndWin.play().catch(() => {});
+            }
+
+            updateAllUIs();
             
             try {
                 const updatePayload = {
@@ -1016,6 +1026,7 @@
         function updateUIPublic() {
             const container = document.getElementById('publicMainBallContainer');
             const waiting = document.getElementById('publicWaitingMessage');
+            const publicNumberEl = document.getElementById('publicNumber');
             
             if (gameState.currentNumber) {
                 waiting.classList.add('hidden');
@@ -1024,34 +1035,67 @@
                 container.classList.remove('hidden');
                 container.classList.add('flex');
                 
-                const publicBall = document.getElementById('publicBall');
-                if(publicBall) {
-                    publicBall.classList.remove('animate-pop');
-                    void publicBall.offsetWidth; 
-                    publicBall.classList.add('animate-pop');
+                // Evitar animar repetidas veces si el número no ha cambiado
+                if (publicNumberEl.dataset.renderedNum !== String(gameState.currentNumber)) {
+                    publicNumberEl.dataset.renderedNum = String(gameState.currentNumber);
+                    const publicBall = document.getElementById('publicBall');
+                    if(publicBall) {
+                        publicBall.classList.remove('animate-pop');
+                        void publicBall.offsetWidth; // Forzar reflow para reiniciar la animación
+                        publicBall.classList.add('animate-pop');
+                    }
+                    publicNumberEl.textContent = gameState.currentNumber;
                 }
-                document.getElementById('publicNumber').textContent = gameState.currentNumber;
             } else {
                 waiting.classList.remove('hidden');
                 waiting.classList.add('block');
                 
                 container.classList.add('hidden');
                 container.classList.remove('flex');
+                publicNumberEl.dataset.renderedNum = '';
             }
 
             const drawnBallsContainer = document.getElementById('publicDrawnBalls');
             if (drawnBallsContainer) {
-                drawnBallsContainer.innerHTML = '';
-                
-                if (gameState.drawnNumbers.length === 0) {
-                    drawnBallsContainer.innerHTML = '<p class="text-sm sm:text-lg text-gray-500 italic">Esperando bolas...</p>';
-                } else {
+                const currentRenderedCount = parseInt(drawnBallsContainer.dataset.renderedCount || 0);
+                const actualCount = gameState.drawnNumbers.length;
+
+                // Optimización: Solo manipular el DOM si la cantidad de bolas cambió
+                if (actualCount === 0) {
+                    if (currentRenderedCount !== 0) {
+                        drawnBallsContainer.innerHTML = '<p class="text-sm sm:text-lg text-gray-500 italic">Esperando bolas...</p>';
+                        drawnBallsContainer.dataset.renderedCount = 0;
+                    }
+                } else if (actualCount > currentRenderedCount) {
+                    if (currentRenderedCount === 0) drawnBallsContainer.innerHTML = ''; // Limpiar mensaje inicial
+                    
+                    // Solo agregar los elementos NUEVOS (ahorra muchísima RAM y previene congelamientos)
+                    const fragment = document.createDocumentFragment();
+                    for (let i = currentRenderedCount; i < actualCount; i++) {
+                        const num = gameState.drawnNumbers[i];
+                        const pill = document.createElement('div');
+                        pill.className = 'w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 rounded-full text-white font-bold text-xl sm:text-3xl flex items-center justify-center shadow-md shrink-0 animate-pop';
+                        pill.textContent = num;
+                        fragment.appendChild(pill);
+                    }
+                    drawnBallsContainer.appendChild(fragment);
+                    drawnBallsContainer.dataset.renderedCount = actualCount;
+                    
+                    // Auto-scroll al final
+                    const scrollParent = drawnBallsContainer.parentElement;
+                    scrollParent.scrollTop = scrollParent.scrollHeight;
+                } else if (actualCount < currentRenderedCount) {
+                    // Caso de reinicio forzado
+                    drawnBallsContainer.innerHTML = '';
+                    const fragment = document.createDocumentFragment();
                     gameState.drawnNumbers.forEach(num => {
                         const pill = document.createElement('div');
                         pill.className = 'w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 rounded-full text-white font-bold text-xl sm:text-3xl flex items-center justify-center shadow-md shrink-0';
                         pill.textContent = num;
-                        drawnBallsContainer.appendChild(pill);
+                        fragment.appendChild(pill);
                     });
+                    drawnBallsContainer.appendChild(fragment);
+                    drawnBallsContainer.dataset.renderedCount = actualCount;
                 }
             }
         }
@@ -1065,6 +1109,7 @@
             const drawButtonsContainer = document.getElementById('drawButtonsContainer');
             const startGameBanner = document.getElementById('startGameBanner');
             const btnForceStart = document.getElementById('btnForceStart');
+            const adminNumberEl = document.getElementById('adminNumber');
 
             // --- Lógica del Estado de Inicio de Juego ---
             let totalCredits = 0;
@@ -1113,43 +1158,54 @@
                 container.classList.remove('hidden');
                 container.classList.add('flex');
 
-                const adminBall = document.getElementById('adminBall');
-                if(adminBall) {
-                    adminBall.classList.remove('animate-pop');
-                    void adminBall.offsetWidth;
-                    adminBall.classList.add('animate-pop');
+                // Evitar animar si no cambió
+                if (adminNumberEl.dataset.renderedNum !== String(gameState.currentNumber)) {
+                    adminNumberEl.dataset.renderedNum = String(gameState.currentNumber);
+                    const adminBall = document.getElementById('adminBall');
+                    if(adminBall) {
+                        adminBall.classList.remove('animate-pop');
+                        void adminBall.offsetWidth;
+                        adminBall.classList.add('animate-pop');
+                    }
+                    adminNumberEl.textContent = gameState.currentNumber;
                 }
-
-                document.getElementById('adminNumber').textContent = gameState.currentNumber;
             } else {
                 waiting.classList.remove('hidden');
                 waiting.classList.add('flex');
                 
                 container.classList.add('hidden');
                 container.classList.remove('flex');
+                adminNumberEl.dataset.renderedNum = '';
             }
 
             for(let i=1; i<=MAX_BALLS; i++) {
                 const cell = document.getElementById(`adminGrid-cell-${i}`);
                 if(cell) {
-                    if(gameState.drawnNumbers.includes(i)) cell.classList.add('active');
-                    else cell.classList.remove('active');
+                    const isActive = cell.classList.contains('active');
+                    const shouldBeActive = gameState.drawnNumbers.includes(i);
+                    // Solo modificar clases si hay un cambio real
+                    if(shouldBeActive && !isActive) cell.classList.add('active');
+                    else if(!shouldBeActive && isActive) cell.classList.remove('active');
                 }
             }
 
             const historyContainer = document.getElementById('recentBallsHistory');
-            historyContainer.innerHTML = '';
+            const historyStr = gameState.drawnNumbers.slice(-5).join(','); // Tracking de historial
             
-            if(gameState.drawnNumbers.length === 0) {
-                historyContainer.innerHTML = '<p class="text-xs sm:text-sm text-gray-600 italic">Aún no hay historial</p>';
-            } else {
-                const recent = [...gameState.drawnNumbers].reverse().slice(1, 6);
-                recent.forEach(num => {
-                    const pill = document.createElement('div');
-                    pill.className = 'w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 border border-slate-600 rounded-full text-white font-bold text-sm sm:text-lg flex items-center justify-center shrink-0';
-                    pill.textContent = num;
-                    historyContainer.appendChild(pill);
-                });
+            if (historyContainer.dataset.renderedHistory !== historyStr) {
+                historyContainer.innerHTML = '';
+                if(gameState.drawnNumbers.length === 0) {
+                    historyContainer.innerHTML = '<p class="text-xs sm:text-sm text-gray-600 italic">Aún no hay historial</p>';
+                } else {
+                    const recent = [...gameState.drawnNumbers].reverse().slice(1, 6);
+                    recent.forEach(num => {
+                        const pill = document.createElement('div');
+                        pill.className = 'w-8 h-8 sm:w-10 sm:h-10 bg-slate-800 border border-slate-600 rounded-full text-white font-bold text-sm sm:text-lg flex items-center justify-center shrink-0';
+                        pill.textContent = num;
+                        historyContainer.appendChild(pill);
+                    });
+                }
+                historyContainer.dataset.renderedHistory = historyStr;
             }
 
             const winnerAlert = document.getElementById('adminWinnerAlert');
@@ -1229,41 +1285,49 @@
         // Overlay gigante que se muestra en CUALQUIER pantalla si hay ganador
         function updateGlobalWinner() {
             const winnerOverlay = document.getElementById('globalWinnerOverlay');
+            const winnerContainer = document.getElementById('globalWinnerCards');
+            
+            const currentWinnersStr = gameState.winners ? gameState.winners.map(w => w.cardIdx).join(',') : '';
+            const renderedWinnersStr = winnerContainer.dataset.renderedWinners || '';
+
             if (gameState.winners && gameState.winners.length > 0) {
                 winnerOverlay.classList.remove('hidden');
                 winnerOverlay.classList.add('flex');
                 
-                const winnerContainer = document.getElementById('globalWinnerCards');
-                winnerContainer.innerHTML = '';
-                
-                gameState.winners.forEach(winnerInfo => {
-                    const cardData = globalCardsData[winnerInfo.cardIdx];
-                    if (cardData) {
-                        const cardHTML = buildCardHTML(cardData.matrix, winnerInfo.cardIdx, cardData.theme);
-                        
-                        const wrapper = document.createElement('div');
-                        // Se agregaron los max-w para que el cartón mantenga su proporción y no se aplaste
-                        wrapper.className = `bingo-card ${cardData.theme.id} relative w-full max-w-[320px] sm:max-w-[450px] md:max-w-[550px] shrink-0 mx-auto`;
-                        wrapper.innerHTML = cardHTML;
+                // Solo reconstruir el DOM gigante de las tarjetas si hay un NUEVO ganador
+                if (currentWinnersStr !== renderedWinnersStr) {
+                    winnerContainer.innerHTML = '';
+                    
+                    gameState.winners.forEach(winnerInfo => {
+                        const cardData = globalCardsData[winnerInfo.cardIdx];
+                        if (cardData) {
+                            const cardHTML = buildCardHTML(cardData.matrix, winnerInfo.cardIdx, cardData.theme);
+                            
+                            const wrapper = document.createElement('div');
+                            wrapper.className = `bingo-card ${cardData.theme.id} relative w-full max-w-[320px] sm:max-w-[450px] md:max-w-[550px] shrink-0 mx-auto`;
+                            wrapper.innerHTML = cardHTML;
 
-                        wrapper.querySelectorAll('.card-cell').forEach(cell => {
-                            if(cell.textContent.trim() !== '') {
-                                cell.classList.add('marked');
-                                const themeTextClass = Array.from(cell.classList).find(c => c.startsWith('text-card-'));
-                                if(themeTextClass) {
-                                    const colorName = themeTextClass.replace('text-card-', '');
-                                    cell.classList.remove('bg-white'); 
-                                    cell.classList.add(`bg-card-${colorName}`, 'text-white'); 
-                                    cell.classList.remove(themeTextClass);
+                            wrapper.querySelectorAll('.card-cell').forEach(cell => {
+                                if(cell.textContent.trim() !== '') {
+                                    cell.classList.add('marked');
+                                    const themeTextClass = Array.from(cell.classList).find(c => c.startsWith('text-card-'));
+                                    if(themeTextClass) {
+                                        const colorName = themeTextClass.replace('text-card-', '');
+                                        cell.classList.remove('bg-white'); 
+                                        cell.classList.add(`bg-card-${colorName}`, 'text-white'); 
+                                        cell.classList.remove(themeTextClass);
+                                    }
                                 }
-                            }
-                        });
-                        winnerContainer.appendChild(wrapper);
-                    }
-                });
+                            });
+                            winnerContainer.appendChild(wrapper);
+                        }
+                    });
+                    winnerContainer.dataset.renderedWinners = currentWinnersStr;
+                }
             } else {
                 winnerOverlay.classList.add('hidden');
                 winnerOverlay.classList.remove('flex');
+                winnerContainer.dataset.renderedWinners = '';
             }
         }
 
