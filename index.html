@@ -123,10 +123,26 @@
                         Sacar Siguiente Bola
                     </button>
 
-                    <button id="auto-btn" class="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white py-3 px-4 sm:px-6 rounded-full text-sm sm:text-base font-medium tracking-wide transition-all shadow-md flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg>
-                        Automático (3s)
-                    </button>
+                    <div class="mt-3 flex gap-2 w-full">
+                        <button id="auto-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white py-3 px-3 sm:px-6 rounded-2xl text-sm sm:text-base font-medium tracking-wide transition-all shadow-md flex items-center justify-center gap-1 sm:gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg>
+                            <span class="hidden sm:inline">Automático</span> (3s)
+                        </button>
+                        <div class="relative flex items-center shrink-0">
+                            <select id="auto-time-select" class="appearance-none bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-sm sm:text-base py-3 pl-3 sm:pl-4 pr-7 sm:pr-8 rounded-2xl cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50 h-full">
+                                <option value="1000">1s</option>
+                                <option value="2000">2s</option>
+                                <option value="3000" selected>3s</option>
+                                <option value="4000">4s</option>
+                                <option value="5000">5s</option>
+                                <option value="6000">6s</option>
+                                <option value="7000">7s</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 sm:px-2 text-emerald-700">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Controles Extra (Simplificado) -->
@@ -258,17 +274,17 @@
 
             <!-- Derecha: Texto de Publicidad y Video/Música -->
             <div class="w-full lg:w-8/12 flex flex-col gap-4 lg:gap-6 lg:h-full min-h-0">
-                <!-- Texto Personalizado Gigante -->
-                <div class="bg-gradient-to-r from-amber-500/20 to-emerald-500/20 backdrop-blur-md rounded-3xl border border-slate-600/50 p-4 sm:p-6 lg:p-10 flex items-center justify-center text-center shadow-2xl shrink-0 min-h-[100px] lg:min-h-[160px]">
-                    <p id="public-ad-text" class="text-xl sm:text-2xl lg:text-4xl font-serif text-white font-medium drop-shadow-lg leading-tight">¡Bienvenidos al Gran Sorteo Loterix! Prepárate para ganar increíbles premios hoy.</p>
-                </div>
-                
-                <!-- Contenedor del Reproductor de Música/Video (Bloqueado) -->
+                <!-- Contenedor del Reproductor de Música/Video (MOVIDO ARRIBA) -->
                 <div class="flex-none lg:flex-1 bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden relative min-h-[250px] sm:min-h-[300px] lg:min-h-0">
                     <!-- iframe con eventos de puntero desactivados y excluido de navegación por teclado -->
                     <iframe id="public-playlist-iframe" class="w-full h-full border-0 absolute inset-0 pointer-events-none" allow="autoplay; encrypted-media" tabindex="-1"></iframe>
                     <!-- Capa transparente absoluta que intercepta físicamente cualquier clic o toque -->
                     <div class="absolute inset-0 z-10 w-full h-full bg-transparent"></div>
+                </div>
+
+                <!-- Texto Personalizado Gigante (MOVIDO ABAJO) -->
+                <div class="bg-gradient-to-r from-amber-500/20 to-emerald-500/20 backdrop-blur-md rounded-3xl border border-slate-600/50 p-4 sm:p-6 lg:p-10 flex items-center justify-center text-center shadow-2xl shrink-0 min-h-[100px] lg:min-h-[160px]">
+                    <p id="public-ad-text" class="text-xl sm:text-2xl lg:text-4xl font-serif text-white font-medium drop-shadow-lg leading-tight">¡Bienvenidos al Gran Sorteo Loterix! Prepárate para ganar increíbles premios hoy.</p>
                 </div>
             </div>
         </div>
@@ -382,8 +398,7 @@
         
         // --- Solución Definitiva: Estado Basado en Tiempo Matemático ---
         let autoStartTime = 0;
-        const AUTO_INTERVAL_MS = 3000;
-        const MIXING_MS = 1500;
+        let autoIntervalMsData = 3000; // Valor por defecto, se lee y actualiza de firebase
         let adminRenderInterval = null;
         let currentFirebaseState = null;
         let publicRenderInterval = null;
@@ -434,15 +449,16 @@
         const settingsModalContent = document.getElementById('settings-modal-content');
 
         // Algoritmo de Estado Derivado: Calcula exactamente qué bola debería estar en pantalla
-        // basándose en el reloj del sistema, haciendo imposible que se congele.
-        function computeDerivedState(baseCalled, baseDeck, baseCurrent, startTime) {
+        function computeDerivedState(baseCalled, baseDeck, baseCurrent, startTime, intervalMs) {
             if (!startTime) return { calledNumbers: baseCalled, deck: baseDeck, currentNumber: baseCurrent, isMixing: false, isFinished: false };
             
             let elapsed = Date.now() - startTime;
-            let cycle = Math.floor(elapsed / AUTO_INTERVAL_MS);
-            let phase = elapsed % AUTO_INTERVAL_MS;
+            let cycle = Math.floor(elapsed / intervalMs);
+            let phase = elapsed % intervalMs;
             
-            let completedDraws = cycle + (phase >= MIXING_MS ? 1 : 0);
+            // Tiempo de mezcla dinámico (máximo 1.5s, pero si el usuario elige 1s de intervalo, será 0.5s)
+            let dynamicMixingMs = Math.min(1500, intervalMs / 2);
+            let completedDraws = cycle + (phase >= dynamicMixingMs ? 1 : 0);
             completedDraws = Math.min(completedDraws, baseDeck.length);
             
             let computedCalled = [...baseCalled];
@@ -457,7 +473,7 @@
                 }
             }
             
-            let currentlyMixing = (computedDeck.length > 0 && phase < MIXING_MS);
+            let currentlyMixing = (computedDeck.length > 0 && phase < dynamicMixingMs);
             
             return {
                 calledNumbers: computedCalled,
@@ -468,18 +484,14 @@
             };
         }
 
-        // Función inteligente para convertir un enlace normal de YouTube en formato embedible
-        // IMPORTANTE: Le añadimos &enablejsapi=1 para poder enviarle comandos (Play/Pause) remotamente
         function getEmbedUrl(url) {
             if (!url) return "";
             
-            // Si es una Playlist pura
             let matchList = url.match(/[?&]list=([^#\&\?]+)/);
             if (matchList && !url.includes('watch')) {
                 return `https://www.youtube.com/embed/videoseries?list=${matchList[1]}&autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
             }
 
-            // Si es un Video de YouTube
             let matchVid = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
             if (matchVid) {
                 let base = `https://www.youtube.com/embed/${matchVid[1]}?autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
@@ -491,11 +503,10 @@
                 return base;
             }
 
-            // Si es de Spotify (no soporta comandos remotos igual de facil, pero muestra la música)
             let matchSpot = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
             if (matchSpot) return `https://open.spotify.com/embed/playlist/${matchSpot[1]}?utm_source=generator&theme=0`;
             
-            return url; // Retorno por defecto
+            return url;
         }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -507,7 +518,7 @@
             if (user === 'douglas' && pass === 'd5720') {
                 errorMsg.classList.add('hidden');
                 sessionStorage.setItem('loterix_admin_auth', 'true');
-                requestWakeLock(); // Mantener pantalla encendida al entrar
+                requestWakeLock(); 
                 
                 loginView.classList.add('opacity-0');
                 setTimeout(async () => {
@@ -539,7 +550,7 @@
                     setTimeout(() => loadingOverlay.classList.add('hidden'), 500);
                 } else {
                     if (sessionStorage.getItem('loterix_admin_auth') === 'true') {
-                        requestWakeLock(); // Mantener pantalla encendida si ya había sesión
+                        requestWakeLock(); 
                         await initControlView();
                         loadingOverlay.classList.add('opacity-0');
                         setTimeout(() => {
@@ -601,7 +612,8 @@
         function publicRenderLoop() {
             if (!currentFirebaseState) return;
             if (currentFirebaseState.isAutoMode) {
-                const derived = computeDerivedState(currentFirebaseState.calledNumbers, currentFirebaseState.deck, currentFirebaseState.currentNumber, currentFirebaseState.autoStartTime);
+                const intervalToUse = currentFirebaseState.autoIntervalMs || 3000;
+                const derived = computeDerivedState(currentFirebaseState.calledNumbers, currentFirebaseState.deck, currentFirebaseState.currentNumber, currentFirebaseState.autoStartTime, intervalToUse);
                 updatePublicUI({ 
                     ...currentFirebaseState, 
                     calledNumbers: derived.calledNumbers, 
@@ -620,7 +632,6 @@
             const gameContent = document.getElementById('public-game-content');
             const adContent = document.getElementById('public-ad-content');
 
-            // 1. Control de Visibilidad (Tablero vs Publicidad)
             if (state.showAds === false) {
                 adContent.classList.add('hidden');
                 gameContent.classList.remove('hidden');
@@ -639,16 +650,13 @@
                 publicCurrentText.innerText = state.currentNumber || '--';
             }
 
-            // Textos de publicidad
             document.getElementById('public-prize-1').innerText = state.prize1 || "10.000 Bs.";
             document.getElementById('public-prize-2').innerText = state.prize2 || "5.000 Bs.";
             document.getElementById('public-ad-text').innerText = state.adText || "¡Bienvenidos al Gran Sorteo Loterix!";
             
-            // QR
             const qrLink = state.qrUrl || "https://wa.me/123456789";
             document.getElementById('public-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrLink)}&color=0f172a&bgcolor=ffffff`;
 
-            // Reproductor de Música (Se recarga si la lista o el index cambian)
             let currentPlaylistUrl = "";
             if (state.playlist && state.playlist.length > 0) {
                 let idx = state.activeTrackIndex || 0;
@@ -666,21 +674,17 @@
                 iframe.dataset.src = "";
             }
 
-            // Escuchar Comandos Multimedia (Play / Pause)
             if (state.mediaCommandId && state.mediaCommandId !== lastExecutedMediaId) {
                 lastExecutedMediaId = state.mediaCommandId;
                 if (iframe && iframe.contentWindow) {
                     if (state.mediaCommand === 'play') {
-                        // Enviamos señal de PLAY interna al iframe de Youtube
                         iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
                     } else if (state.mediaCommand === 'pause') {
-                        // Enviamos señal de PAUSE interna al iframe de Youtube
                         iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
                     }
                 }
             }
 
-            // Tablero
             const activeNumbers = state.calledNumbers || [];
             for (let i = 1; i <= 90; i++) {
                 const cell = document.getElementById(`pub-cell-${i}`);
@@ -715,6 +719,7 @@
                 isDrawing = false; 
                 isAutoMode = state.isAutoMode || false;
                 autoStartTime = state.autoStartTime || 0;
+                autoIntervalMsData = state.autoIntervalMs || 3000;
                 
                 showAdsData = state.showAds !== undefined ? state.showAds : true;
                 prize1Data = state.prize1 || "10.000 Bs.";
@@ -722,7 +727,6 @@
                 qrUrlData = state.qrUrl || "https://wa.me/123456789";
                 adTextData = state.adText || "¡Bienvenidos al Gran Sorteo Loterix! Prepárate para ganar increíbles premios hoy.";
                 
-                // Cargar playlist o convertir URL antigua a playlist
                 playlistData = state.playlist || (state.playlistUrl ? [state.playlistUrl] : []);
                 activeTrackIndexData = state.activeTrackIndex || 0;
 
@@ -730,6 +734,15 @@
                 document.getElementById('prize-2-input').value = prize2Data;
                 document.getElementById('qr-input').value = qrUrlData;
                 document.getElementById('ad-text-input').value = adTextData;
+                
+                const timeSelect = document.getElementById('auto-time-select');
+                if (timeSelect) {
+                    timeSelect.value = autoIntervalMsData.toString();
+                    if (isAutoMode) {
+                        timeSelect.disabled = true;
+                        timeSelect.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                }
 
                 if (deck.length === 0 && calledNumbers.length < 90) {
                     initDeck();
@@ -750,17 +763,20 @@
                 const autoBtn = document.getElementById('auto-btn');
                 const drawBtn = document.getElementById('draw-btn');
                 autoBtn.classList.replace('bg-emerald-600', 'bg-rose-600');
-                autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pausar Automático`;
+                autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> <span class="hidden sm:inline">Pausar</span> Automático`;
                 drawBtn.disabled = true;
                 drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
                 if (adminRenderInterval) clearInterval(adminRenderInterval);
                 adminRenderInterval = setInterval(adminRenderLoop, 100);
+            } else {
+                const autoBtn = document.getElementById('auto-btn');
+                const seconds = autoIntervalMsData / 1000;
+                autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg> <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
             }
         }
 
         async function syncStateToFirebase() {
             try {
-                // Al guardar en firebase, guardamos también los comandos multimedia si los hay
                 await setDoc(gameDocRef, {
                     calledNumbers: calledNumbers,
                     currentNumber: currentNumber,
@@ -768,6 +784,7 @@
                     isDrawing: isDrawing,
                     isAutoMode: isAutoMode,
                     autoStartTime: autoStartTime,
+                    autoIntervalMs: autoIntervalMsData,
                     showAds: showAdsData,
                     prize1: prize1Data,
                     prize2: prize2Data,
@@ -797,7 +814,6 @@
                 const li = document.createElement('li');
                 const isActive = index === activeTrackIndexData;
                 
-                // Extraer un nombre corto para mostrar
                 let displayUrl = url.replace(/(^\w+:|^)\/\//, '').replace('www.youtube.com/watch?v=', 'Youtube: ');
                 if (displayUrl.length > 35) displayUrl = displayUrl.substring(0, 35) + '...';
 
@@ -820,7 +836,6 @@
                 container.appendChild(li);
             });
 
-            // Re-vincular eventos a los nuevos botones
             document.querySelectorAll('.play-track-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     activeTrackIndexData = parseInt(e.currentTarget.dataset.index);
@@ -877,7 +892,7 @@
 
         function adminRenderLoop() {
             if (!isAutoMode) return;
-            const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime);
+            const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime, autoIntervalMsData);
             updateUI(derived);
             
             if (derived.isFinished) {
@@ -949,7 +964,7 @@
             if (isDrawing || isAutoMode) return;
 
             isDrawing = true;
-            showAdsData = false; // MUESTRA TABLERO AUTOMATICAMENTE AL JUGAR
+            showAdsData = false;
             updateToggleBtnUI();
             syncStateToFirebase();
 
@@ -988,13 +1003,16 @@
         function toggleAutoMode() {
             const autoBtn = document.getElementById('auto-btn');
             const drawBtn = document.getElementById('draw-btn');
+            const timeSelect = document.getElementById('auto-time-select');
+            const seconds = autoIntervalMsData / 1000;
+
             const autoPlayIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg>`;
             const pauseIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
             const playIconSVG = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 
             if (isAutoMode) {
                 // PAUSADO
-                const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime);
+                const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime, autoIntervalMsData);
                 calledNumbers = derived.calledNumbers;
                 deck = derived.deck;
                 currentNumber = derived.currentNumber;
@@ -1011,7 +1029,10 @@
 
                 autoBtn.classList.replace('bg-rose-600', 'bg-emerald-600');
                 autoBtn.classList.replace('hover:bg-rose-700', 'hover:bg-emerald-700');
-                autoBtn.innerHTML = `${autoPlayIconSVG} Automático (3s)`;
+                autoBtn.innerHTML = `${autoPlayIconSVG} <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
+                
+                timeSelect.disabled = false;
+                timeSelect.classList.remove('opacity-50', 'cursor-not-allowed');
                 
                 if (calledNumbers.length < 90) {
                     drawBtn.disabled = false;
@@ -1035,48 +1056,62 @@
                 
                 autoBtn.classList.replace('bg-emerald-600', 'bg-rose-600');
                 autoBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-rose-700');
-                autoBtn.innerHTML = `${pauseIconSVG} Pausar Automático`;
+                autoBtn.innerHTML = `${pauseIconSVG} <span class="hidden sm:inline">Pausar</span> Automático`;
                 
+                timeSelect.disabled = true;
+                timeSelect.classList.add('opacity-50', 'cursor-not-allowed');
+
                 drawBtn.disabled = true;
                 drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
             }
         }
 
         function showToast(message, isError = false) {
-    }
-
-    function openPublicWindow() {
-        // Usamos URL object para preservar otros parámetros vitales del entorno
-        const urlObj = new URL(window.location.href);
-        urlObj.searchParams.set('public', 'true');
-        const finalUrl = urlObj.toString();
-        
-        const newWindow = window.open(finalUrl, '_blank'); 
-        
-        // Verificamos si Brave o el celular bloqueó la ventana emergente
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            const textArea = document.createElement("textarea");
-            textArea.value = finalUrl;
-            textArea.style.position = "fixed";
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            textArea.style.opacity = "0";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            
-            try {
-                document.execCommand('copy');
-                showToast("Brave bloqueó la pestaña. Enlace copiado al portapapeles, pégalo en una pestaña nueva.");
-            } catch (err) {
-                showToast("Ventana bloqueada. Por favor permite los pop-ups en tu navegador.", true);
+            let toast = document.getElementById('toast-notification');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast-notification';
+                document.body.appendChild(toast);
             }
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-white text-sm font-medium shadow-xl z-[9999] transition-all duration-300 opacity-100 translate-y-0 text-center w-11/12 max-w-sm ${isError ? 'bg-rose-600' : 'bg-slate-800'}`;
+            toast.innerText = message;
             
-            document.body.removeChild(textArea);
+            setTimeout(() => {
+                toast.classList.replace('opacity-100', 'opacity-0');
+                toast.classList.replace('translate-y-0', 'translate-y-4');
+            }, 4500);
         }
-    }
 
-    function showModal() {
+        function openPublicWindow() {
+            const urlObj = new URL(window.location.href);
+            urlObj.searchParams.set('public', 'true');
+            const finalUrl = urlObj.toString();
+            
+            const newWindow = window.open(finalUrl, '_blank'); 
+            
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                const textArea = document.createElement("textarea");
+                textArea.value = finalUrl;
+                textArea.style.position = "fixed";
+                textArea.style.top = "0";
+                textArea.style.left = "0";
+                textArea.style.opacity = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    showToast("Brave bloqueó la pestaña. Enlace copiado al portapapeles, pégalo en una pestaña nueva.");
+                } catch (err) {
+                    showToast("Ventana bloqueada. Por favor permite los pop-ups en tu navegador.", true);
+                }
+                
+                document.body.removeChild(textArea);
+            }
+        }
+
+        function showModal() {
             const resetModal = document.getElementById('reset-modal');
             const resetModalContent = document.getElementById('reset-modal-content');
             resetModal.classList.remove('hidden');
@@ -1105,7 +1140,6 @@
             autoStartTime = 0;
             initDeck(); 
             
-            // REINICIO -> Mostrar Publicidad
             showAdsData = true;
             updateToggleBtnUI();
             
@@ -1113,6 +1147,10 @@
             const playIconSVG = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
             drawBtn.disabled = false;
             drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
+
+            const autoBtn = document.getElementById('auto-btn');
+            const seconds = autoIntervalMsData / 1000;
+            autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg> <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
 
             updateUI();
             await syncStateToFirebase(); 
@@ -1131,7 +1169,20 @@
                 if (e.target.id === 'reset-modal') hideModal();
             });
 
-            // Controles del Modal de Ajustes
+            // Evento para el cambio de tiempo automático
+            document.getElementById('auto-time-select').addEventListener('change', async (e) => {
+                autoIntervalMsData = parseInt(e.target.value);
+                const autoBtn = document.getElementById('auto-btn');
+                const seconds = autoIntervalMsData / 1000;
+                
+                if (!isAutoMode) {
+                    const autoPlayIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg>`;
+                    autoBtn.innerHTML = `${autoPlayIconSVG} <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
+                }
+                
+                await syncStateToFirebase();
+            });
+
             function openSettingsModal() {
                 document.getElementById('prize-1-input').value = prize1Data;
                 document.getElementById('prize-2-input').value = prize2Data;
@@ -1160,7 +1211,6 @@
                 if (e.target.id === 'settings-modal') closeSettingsModal();
             });
 
-            // Añadir nuevo enlace a la playlist
             document.getElementById('add-track-btn').addEventListener('click', async () => {
                 const input = document.getElementById('new-track-input');
                 const url = input.value.trim();
@@ -1172,14 +1222,12 @@
                 }
             });
 
-            // Botón manual para cambiar entre Tablero y Publicidad (dentro del modal)
             document.getElementById('toggle-screen-btn').addEventListener('click', () => {
                 showAdsData = !showAdsData;
                 updateToggleBtnUI();
                 syncStateToFirebase();
             });
 
-            // Botones de Reproducir / Pausar Música Globales
             document.getElementById('yt-play-btn').addEventListener('click', async () => {
                 mediaCommandData = 'play';
                 mediaCommandIdData = Date.now();
@@ -1192,7 +1240,6 @@
                 await syncStateToFirebase();
             });
 
-            // Guardar Contenido Textual y Cerrar Modal
             document.getElementById('update-info-btn').addEventListener('click', async () => {
                 prize1Data = document.getElementById('prize-1-input').value || "10.000 Bs.";
                 prize2Data = document.getElementById('prize-2-input').value || "5.000 Bs.";
