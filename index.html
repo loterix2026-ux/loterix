@@ -1681,72 +1681,112 @@
 
             if (cardsContainer) {
                 
-                cardsContainer.querySelectorAll('.card-cell.marked').forEach(el => {
-                    el.classList.remove('marked', 'text-white');
-                    if (el.dataset.origBgClass) el.classList.remove(el.dataset.origBgClass);
-                    if (el.dataset.origTextClass) el.classList.add(el.dataset.origTextClass);
-                    el.classList.add('bg-white');
-                });
-
-                gameState.drawnNumbers.forEach(num => {
-                    cardsContainer.querySelectorAll(`.global-num-${num}`).forEach(el => {
-                        el.classList.add('marked');
-                        const themeTextClass = Array.from(el.classList).find(c => c.startsWith('text-card-'));
-                        if(themeTextClass) {
-                            const colorName = themeTextClass.replace('text-card-', '');
-                            el.classList.remove('bg-white');
-                            el.classList.add(`bg-card-${colorName}`, 'text-white');
-                            el.classList.remove(themeTextClass);
-                            
-                            el.dataset.origTextClass = themeTextClass;
-                            el.dataset.origBgClass = `bg-card-${colorName}`;
-                        }
+                // --- OPTIMIZACIÓN EXTREMA: NÚMEROS MARCADOS ---
+                if (!window.lastRenderedDrawnNumbers) window.lastRenderedDrawnNumbers = [];
+                
+                // Si hay menos números que antes (el admin reinició la partida), limpiamos todo
+                if (gameState.drawnNumbers.length < window.lastRenderedDrawnNumbers.length) {
+                    cardsContainer.querySelectorAll('.card-cell.marked').forEach(el => {
+                        el.classList.remove('marked', 'text-white');
+                        if (el.dataset.origBgClass) el.classList.remove(el.dataset.origBgClass);
+                        if (el.dataset.origTextClass) el.classList.add(el.dataset.origTextClass);
+                        el.classList.add('bg-white');
                     });
-                });
+                    window.lastRenderedDrawnNumbers = [];
+                }
 
-                if (!gameState.selectedCards) gameState.selectedCards = {};
-                for (let i = 1; i <= 150; i++) {
-                    const cardWrap = document.getElementById(`card-wrap-${i}`);
-                    if (cardWrap) {
-                        const overlay = cardWrap.querySelector('.card-overlay');
-                        const overlayText = overlay.querySelector('div'); 
-                        
-                        cardWrap.dataset.owner = gameState.selectedCards[i] || '';
-
-                        if (gameState.selectedCards[i]) {
-                            cardWrap.classList.remove('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
-                            
-                            if (gameState.selectedCards[i] === localPlayerAccountId) {
-                                // MI CARTÓN: Fondo transparente y etiqueta pequeña en la esquina para no tapar los números
-                                overlay.classList.remove('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
-                                overlay.classList.add('flex', 'bg-transparent', 'pointer-events-none');
-                                
-                                overlayText.textContent = "✓ MI CARTÓN";
-                                overlayText.className = "absolute top-1 right-1 sm:top-2 sm:right-2 bg-emerald-600 text-white font-bold text-[10px] sm:text-xs px-2 py-1 rounded shadow-md pointer-events-auto border border-emerald-400";
-                                
-                                cardWrap.setAttribute('onclick', `window.customAlert('Mi Cartón', 'Ya tienes este cartón seleccionado. ¡Mucha suerte!')`);
-                            } else {
-                                // CARTÓN DE OTRO JUGADOR: Oscurecido y bloqueado
-                                overlay.classList.remove('hidden', 'bg-transparent', 'pointer-events-none');
-                                overlay.classList.add('flex', 'bg-slate-900/80', 'backdrop-blur-[2px]');
-                                
-                                overlayText.textContent = "RESERVADO";
-                                overlayText.className = "border-2 sm:border-4 border-red-500 text-red-500 font-black text-sm sm:text-xl lg:text-3xl px-3 py-1 sm:px-6 sm:py-2 rounded-xl -rotate-12 uppercase tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.4)] bg-casino-dark/90 relative pointer-events-auto";
-                                
-                                cardWrap.setAttribute('onclick', `window.customAlert('Cartón Reservado', 'Este cartón ya ha sido reservado por otro jugador.')`);
+                // Extraemos SOLO los números que acaban de salir y no han sido pintados
+                const newNumbers = gameState.drawnNumbers.slice(window.lastRenderedDrawnNumbers.length);
+                if (newNumbers.length > 0) {
+                    newNumbers.forEach(num => {
+                        cardsContainer.querySelectorAll(`.global-num-${num}`).forEach(el => {
+                            // Previene repintados innecesarios
+                            if (!el.classList.contains('marked')) {
+                                el.classList.add('marked');
+                                const themeTextClass = Array.from(el.classList).find(c => c.startsWith('text-card-'));
+                                if(themeTextClass) {
+                                    const colorName = themeTextClass.replace('text-card-', '');
+                                    el.classList.remove('bg-white');
+                                    el.classList.add(`bg-card-${colorName}`, 'text-white');
+                                    el.classList.remove(themeTextClass);
+                                    
+                                    el.dataset.origTextClass = themeTextClass;
+                                    el.dataset.origBgClass = `bg-card-${colorName}`;
+                                }
                             }
-                        } else {
-                            // CARTÓN LIBRE
-                            overlay.classList.remove('flex', 'bg-transparent', 'pointer-events-none');
-                            overlay.classList.add('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
-                            
-                            cardWrap.classList.add('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
-                            cardWrap.setAttribute('onclick', `window.selectCard(${i})`);
+                        });
+                    });
+                    // Guardamos la memoria de lo que ya pintamos
+                    window.lastRenderedDrawnNumbers = [...gameState.drawnNumbers];
+                }
+
+                // --- OPTIMIZACIÓN EXTREMA: SELECCIÓN DE CARTONES ---
+                if (!window.lastRenderedSelectedCards) window.lastRenderedSelectedCards = {};
+                if (window.lastGameStartedState === undefined) window.lastGameStartedState = null;
+
+                const currentSelectedStr = JSON.stringify(gameState.selectedCards || {});
+                const lastSelectedStr = JSON.stringify(window.lastRenderedSelectedCards);
+                
+                // Solo recorrer los 150 cartones si HUBO ALGÚN CAMBIO en las reservas o en el estado del juego
+                const selectionChanged = currentSelectedStr !== lastSelectedStr;
+                const gameStartedChanged = gameState.isGameStarted !== window.lastGameStartedState;
+
+                if (selectionChanged || gameStartedChanged) {
+                    if (!gameState.selectedCards) gameState.selectedCards = {};
+                    
+                    for (let i = 1; i <= 150; i++) {
+                        const currentOwner = gameState.selectedCards[i] || '';
+                        const previousOwner = window.lastRenderedSelectedCards[i] || '';
+                        
+                        // Solo modificar el HTML si este cartón en específico cambió de dueño
+                        if (currentOwner !== previousOwner || gameStartedChanged) {
+                            const cardWrap = document.getElementById(`card-wrap-${i}`);
+                            if (cardWrap) {
+                                const overlay = cardWrap.querySelector('.card-overlay');
+                                const overlayText = overlay.querySelector('div'); 
+                                
+                                cardWrap.dataset.owner = currentOwner;
+
+                                if (currentOwner) {
+                                    cardWrap.classList.remove('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
+                                    
+                                    if (currentOwner === localPlayerAccountId) {
+                                        // MI CARTÓN
+                                        overlay.classList.remove('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                        overlay.classList.add('flex', 'bg-transparent', 'pointer-events-none');
+                                        
+                                        overlayText.textContent = "✓ MI CARTÓN";
+                                        overlayText.className = "absolute top-1 right-1 sm:top-2 sm:right-2 bg-emerald-600 text-white font-bold text-[10px] sm:text-xs px-2 py-1 rounded shadow-md pointer-events-auto border border-emerald-400";
+                                        
+                                        cardWrap.setAttribute('onclick', `window.customAlert('Mi Cartón', 'Ya tienes este cartón seleccionado. ¡Mucha suerte!')`);
+                                    } else {
+                                        // CARTÓN DE OTRO JUGADOR
+                                        overlay.classList.remove('hidden', 'bg-transparent', 'pointer-events-none');
+                                        overlay.classList.add('flex', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                        
+                                        overlayText.textContent = "RESERVADO";
+                                        overlayText.className = "border-2 sm:border-4 border-red-500 text-red-500 font-black text-sm sm:text-xl lg:text-3xl px-3 py-1 sm:px-6 sm:py-2 rounded-xl -rotate-12 uppercase tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.4)] bg-casino-dark/90 relative pointer-events-auto";
+                                        
+                                        cardWrap.setAttribute('onclick', `window.customAlert('Cartón Reservado', 'Este cartón ya ha sido reservado por otro jugador.')`);
+                                    }
+                                } else {
+                                    // CARTÓN LIBRE
+                                    overlay.classList.remove('flex', 'bg-transparent', 'pointer-events-none');
+                                    overlay.classList.add('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                    
+                                    cardWrap.classList.add('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
+                                    cardWrap.setAttribute('onclick', `window.selectCard(${i})`);
+                                }
+                            }
                         }
                     }
+                    
+                    window.lastRenderedSelectedCards = {...gameState.selectedCards};
+                    window.lastGameStartedState = gameState.isGameStarted;
+                    
+                    // Ejecutamos el filtro solo cuando sea necesario
+                    window.filterCards();
                 }
-                
-                window.filterCards();
             }
         }
 
@@ -1771,11 +1811,12 @@
                 const isMine = item.dataset.owner === localPlayerAccountId;
                 const matchesColor = filter === 'all' || item.classList.contains(filter);
                 
-                if (showOnlyMyCards) {
-                    // En modo restringido, debe ser tuyo Y coincidir con el color
-                    item.style.display = (isMine && matchesColor) ? 'block' : 'none';
-                } else {
-                    item.style.display = matchesColor ? 'block' : 'none';
+                const shouldShow = showOnlyMyCards ? (isMine && matchesColor) : matchesColor;
+                const newDisplayValue = shouldShow ? 'block' : 'none';
+                
+                // Evitar forzar el recálculo visual del navegador si no ha cambiado el display
+                if (item.style.display !== newDisplayValue) {
+                    item.style.display = newDisplayValue;
                 }
             });
         }
