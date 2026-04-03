@@ -377,31 +377,16 @@
         let calledNumbers = [];
         let currentNumber = null;
         let isDrawing = false;
-        let isAutoMode = false; // Reemplaza la variable autoDrawInterval
+        let isAutoMode = false;
         let deck = []; 
-        let publicShuffleInterval = null;
         
-        // --- Solución 1: Web Worker para el temporizador en segundo plano ---
-        const timerWorkerScript = `
-            let interval = null;
-            self.onmessage = function(e) {
-                if (e.data.command === 'start') {
-                    if(interval) clearInterval(interval);
-                    interval = setInterval(() => self.postMessage('tick'), e.data.ms);
-                } else if (e.data.command === 'stop') {
-                    clearInterval(interval);
-                    interval = null;
-                }
-            };
-        `;
-        const timerBlob = new Blob([timerWorkerScript], { type: 'application/javascript' });
-        const timerWorker = new Worker(URL.createObjectURL(timerBlob));
-        
-        timerWorker.onmessage = function(e) {
-            if (e.data === 'tick' && isAutoMode && !isDrawing) {
-                drawNumber();
-            }
-        };
+        // --- Solución Definitiva: Estado Basado en Tiempo Matemático ---
+        let autoStartTime = 0;
+        const AUTO_INTERVAL_MS = 3000;
+        const MIXING_MS = 1500;
+        let adminRenderInterval = null;
+        let currentFirebaseState = null;
+        let publicRenderInterval = null;
 
         // --- Solución 2: Wake Lock para evitar que se apague la pantalla ---
         let wakeLock = null;
@@ -447,6 +432,41 @@
         const publicView = document.getElementById('public-view');
         const settingsModal = document.getElementById('settings-modal');
         const settingsModalContent = document.getElementById('settings-modal-content');
+
+        // Algoritmo de Estado Derivado: Calcula exactamente qué bola debería estar en pantalla
+        // basándose en el reloj del sistema, haciendo imposible que se congele.
+        function computeDerivedState(baseCalled, baseDeck, baseCurrent, startTime) {
+            if (!startTime) return { calledNumbers: baseCalled, deck: baseDeck, currentNumber: baseCurrent, isMixing: false, isFinished: false };
+            
+            let elapsed = Date.now() - startTime;
+            let cycle = Math.floor(elapsed / AUTO_INTERVAL_MS);
+            let phase = elapsed % AUTO_INTERVAL_MS;
+            
+            let completedDraws = cycle + (phase >= MIXING_MS ? 1 : 0);
+            completedDraws = Math.min(completedDraws, baseDeck.length);
+            
+            let computedCalled = [...baseCalled];
+            let computedDeck = [...baseDeck];
+            let computedCurrent = baseCurrent;
+            
+            for (let i = 0; i < completedDraws; i++) {
+                if (computedDeck.length > 0) {
+                    let num = computedDeck.pop();
+                    computedCalled.unshift(num);
+                    computedCurrent = num;
+                }
+            }
+            
+            let currentlyMixing = (computedDeck.length > 0 && phase < MIXING_MS);
+            
+            return {
+                calledNumbers: computedCalled,
+                deck: computedDeck,
+                currentNumber: computedCurrent,
+                isMixing: currentlyMixing,
+                isFinished: computedDeck.length === 0 && !currentlyMixing
+            };
+        }
 
         // Función inteligente para convertir un enlace normal de YouTube en formato embedible
         // IMPORTANTE: Le añadimos &enablejsapi=1 para poder enviarle comandos (Play/Pause) remotamente
@@ -564,11 +584,33 @@
 
             onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    updatePublicUI(docSnap.data());
+                    currentFirebaseState = docSnap.data();
+                    
+                    if (currentFirebaseState.isAutoMode || currentFirebaseState.isDrawing) {
+                        if (!publicRenderInterval) publicRenderInterval = setInterval(publicRenderLoop, 100);
+                    } else {
+                        if (publicRenderInterval) { clearInterval(publicRenderInterval); publicRenderInterval = null; }
+                        updatePublicUI(currentFirebaseState);
+                    }
                 }
             }, (error) => {
                 console.error("Error al leer datos: ", error);
             });
+        }
+
+        function publicRenderLoop() {
+            if (!currentFirebaseState) return;
+            if (currentFirebaseState.isAutoMode) {
+                const derived = computeDerivedState(currentFirebaseState.calledNumbers, currentFirebaseState.deck, currentFirebaseState.currentNumber, currentFirebaseState.autoStartTime);
+                updatePublicUI({ 
+                    ...currentFirebaseState, 
+                    calledNumbers: derived.calledNumbers, 
+                    currentNumber: derived.currentNumber, 
+                    isDrawing: derived.isMixing 
+                });
+            } else if (currentFirebaseState.isDrawing) {
+                updatePublicUI(currentFirebaseState); 
+            }
         }
 
         function updatePublicUI(state) {
@@ -591,16 +633,8 @@
             
             if (state.isDrawing && state.showAds === false) {
                 publicCurrentText.classList.add('animate-pulse', 'opacity-50');
-                if (!publicShuffleInterval) {
-                    publicShuffleInterval = setInterval(() => {
-                        publicCurrentText.innerText = Math.floor(Math.random() * 90) + 1;
-                    }, 50);
-                }
+                publicCurrentText.innerText = Math.floor(Math.random() * 90) + 1;
             } else {
-                if (publicShuffleInterval) {
-                    clearInterval(publicShuffleInterval);
-                    publicShuffleInterval = null;
-                }
                 publicCurrentText.classList.remove('animate-pulse', 'opacity-50');
                 publicCurrentText.innerText = state.currentNumber || '--';
             }
@@ -676,7 +710,11 @@
                 const state = docSnap.data();
                 calledNumbers = state.calledNumbers || [];
                 currentNumber = state.currentNumber || null;
+                deck = state.deck || [];
+                
                 isDrawing = false; 
+                isAutoMode = state.isAutoMode || false;
+                autoStartTime = state.autoStartTime || 0;
                 
                 showAdsData = state.showAds !== undefined ? state.showAds : true;
                 prize1Data = state.prize1 || "10.000 Bs.";
@@ -693,10 +731,13 @@
                 document.getElementById('qr-input').value = qrUrlData;
                 document.getElementById('ad-text-input').value = adTextData;
 
-                calledNumbers.forEach(n => {
-                    const idx = deck.indexOf(n);
-                    if(idx > -1) deck.splice(idx, 1);
-                });
+                if (deck.length === 0 && calledNumbers.length < 90) {
+                    initDeck();
+                    calledNumbers.forEach(n => {
+                        const idx = deck.indexOf(n);
+                        if(idx > -1) deck.splice(idx, 1);
+                    });
+                }
             }
 
             updateUI();
@@ -704,6 +745,17 @@
             renderPlaylistUI();
             await syncStateToFirebase(); 
             setupEventListeners();
+            
+            if (isAutoMode) {
+                const autoBtn = document.getElementById('auto-btn');
+                const drawBtn = document.getElementById('draw-btn');
+                autoBtn.classList.replace('bg-emerald-600', 'bg-rose-600');
+                autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pausar Automático`;
+                drawBtn.disabled = true;
+                drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
+                if (adminRenderInterval) clearInterval(adminRenderInterval);
+                adminRenderInterval = setInterval(adminRenderLoop, 100);
+            }
         }
 
         async function syncStateToFirebase() {
@@ -712,7 +764,10 @@
                 await setDoc(gameDocRef, {
                     calledNumbers: calledNumbers,
                     currentNumber: currentNumber,
+                    deck: deck,
                     isDrawing: isDrawing,
+                    isAutoMode: isAutoMode,
+                    autoStartTime: autoStartTime,
                     showAds: showAdsData,
                     prize1: prize1Data,
                     prize2: prize2Data,
@@ -820,31 +875,58 @@
             }
         }
 
-        function updateUI() {
+        function adminRenderLoop() {
+            if (!isAutoMode) return;
+            const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime);
+            updateUI(derived);
+            
+            if (derived.isFinished) {
+                toggleAutoMode();
+                document.getElementById('draw-btn').innerHTML = 'Juego Terminado';
+            }
+        }
+
+        function updateUI(derived = null) {
+            const activeCalled = derived ? derived.calledNumbers : calledNumbers;
+            const activeCurrent = derived ? derived.currentNumber : currentNumber;
+            const activeMixing = derived ? derived.isMixing : isDrawing;
+
             const currentBallText = document.getElementById('current-ball-text');
             const trophyIcon = document.getElementById('trophy-icon');
             const currentBallContainer = document.getElementById('current-ball-container');
 
-            document.getElementById('total-called').innerText = calledNumbers.length;
-            document.getElementById('total-remaining').innerText = 90 - calledNumbers.length;
+            document.getElementById('total-called').innerText = activeCalled.length;
+            document.getElementById('total-remaining').innerText = 90 - activeCalled.length;
 
-            if (currentNumber) {
+            if (activeMixing) {
                 trophyIcon.style.display = 'none';
                 currentBallText.style.display = 'block';
-                currentBallText.innerText = currentNumber;
+                currentBallText.innerText = Math.floor(Math.random() * 90) + 1;
+                currentBallText.classList.add('opacity-50');
                 currentBallContainer.classList.remove('bg-slate-50');
-                currentBallContainer.classList.add('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md');
+                currentBallContainer.classList.add('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md', 'animate-pulse');
+                document.getElementById('ball-wrapper').classList.replace('scale-100', 'scale-95');
             } else {
-                currentBallText.style.display = 'none';
-                trophyIcon.style.display = 'block';
-                currentBallContainer.classList.add('bg-slate-50');
-                currentBallContainer.classList.remove('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md');
+                document.getElementById('ball-wrapper').classList.replace('scale-95', 'scale-100');
+                if (activeCurrent) {
+                    trophyIcon.style.display = 'none';
+                    currentBallText.style.display = 'block';
+                    currentBallText.innerText = activeCurrent;
+                    currentBallText.classList.remove('opacity-50');
+                    currentBallContainer.classList.remove('bg-slate-50', 'animate-pulse');
+                    currentBallContainer.classList.add('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md');
+                } else {
+                    currentBallText.style.display = 'none';
+                    trophyIcon.style.display = 'block';
+                    currentBallContainer.classList.add('bg-slate-50');
+                    currentBallContainer.classList.remove('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md', 'animate-pulse');
+                }
             }
 
             for (let i = 1; i <= 90; i++) {
                 const cell = document.getElementById(`cell-${i}`);
-                const isCalled = calledNumbers.includes(i);
-                const isLast = (i === currentNumber && !isDrawing);
+                const isCalled = activeCalled.includes(i);
+                const isLast = (i === activeCurrent && !activeMixing);
 
                 cell.innerHTML = i;
 
@@ -864,7 +946,7 @@
                 if (isAutoMode) toggleAutoMode();
                 return;
             }
-            if (isDrawing) return;
+            if (isDrawing || isAutoMode) return;
 
             isDrawing = true;
             showAdsData = false; // MUESTRA TABLERO AUTOMATICAMENTE AL JUGAR
@@ -872,122 +954,95 @@
             syncStateToFirebase();
 
             const drawBtn = document.getElementById('draw-btn');
-            const currentBallText = document.getElementById('current-ball-text');
-            const ballWrapper = document.getElementById('ball-wrapper');
-            const currentBallContainer = document.getElementById('current-ball-container');
             const playIconSVG = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 
             drawBtn.disabled = true;
             drawBtn.innerHTML = '<span class="animate-pulse">Mezclando...</span>';
-            
-            document.getElementById('trophy-icon').style.display = 'none';
-            currentBallText.style.display = 'block';
-            currentBallContainer.classList.remove('bg-slate-50');
-            currentBallContainer.classList.add('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md');
-            
-            ballWrapper.classList.replace('scale-100', 'scale-95');
-            currentBallContainer.classList.add('animate-pulse');
 
             let counter = 0;
-            const shuffleInterval = setInterval(() => {
-                currentBallText.innerText = Math.floor(Math.random() * 90) + 1;
-                currentBallText.classList.add('opacity-50');
+            const manualDrawInterval = setInterval(() => {
                 counter++;
+                updateUI(); 
                 
-                if (counter > 12) {
-                    clearInterval(shuffleInterval);
+                if (counter > 15) {
+                    clearInterval(manualDrawInterval);
                     
                     const newNumber = deck.pop();
                     calledNumbers.unshift(newNumber);
                     currentNumber = newNumber;
                     isDrawing = false;
                     
-                    currentBallText.classList.remove('opacity-50');
-                    ballWrapper.classList.replace('scale-95', 'scale-100');
-                    currentBallContainer.classList.remove('animate-pulse');
+                    updateUI();
+                    syncStateToFirebase(); 
                     
                     if (calledNumbers.length === 90) {
                         drawBtn.innerHTML = 'Juego Terminado';
-                        if (isAutoMode) toggleAutoMode();
                     } else {
-                        if (isAutoMode) {
-                            drawBtn.disabled = true;
-                            drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
-                        } else {
-                            drawBtn.disabled = false;
-                            drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
-                        }
+                        drawBtn.disabled = false;
+                        drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
                     }
-                    
-                    updateUI();
-                    syncStateToFirebase(); 
                 }
-            }, 50);
+            }, 100);
         }
 
         function toggleAutoMode() {
             const autoBtn = document.getElementById('auto-btn');
             const drawBtn = document.getElementById('draw-btn');
-            const keepAliveAudio = document.getElementById('keep-alive-audio');
             const autoPlayIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg>`;
             const pauseIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
             const playIconSVG = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 
             if (isAutoMode) {
-                // PAUSADO -> Mostrar publicidad automáticamente
-                timerWorker.postMessage({ command: 'stop' });
-                keepAliveAudio.pause(); // Detenemos el audio silencioso
+                // PAUSADO
+                const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime);
+                calledNumbers = derived.calledNumbers;
+                deck = derived.deck;
+                currentNumber = derived.currentNumber;
+                
                 isAutoMode = false;
+                autoStartTime = 0;
                 showAdsData = true;
                 updateToggleBtnUI();
+                
+                if (adminRenderInterval) { clearInterval(adminRenderInterval); adminRenderInterval = null; }
+                
                 syncStateToFirebase();
+                updateUI();
 
                 autoBtn.classList.replace('bg-rose-600', 'bg-emerald-600');
                 autoBtn.classList.replace('hover:bg-rose-700', 'hover:bg-emerald-700');
                 autoBtn.innerHTML = `${autoPlayIconSVG} Automático (3s)`;
                 
-                if (calledNumbers.length < 90 && !isDrawing) {
+                if (calledNumbers.length < 90) {
                     drawBtn.disabled = false;
                     drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
+                } else {
+                    drawBtn.innerHTML = 'Juego Terminado';
                 }
             } else {
-                // INICIADO -> Mostrar tablero automáticamente
+                // INICIADO
                 if (calledNumbers.length >= 90) return;
                 
+                isAutoMode = true;
+                autoStartTime = Date.now();
                 showAdsData = false;
                 updateToggleBtnUI();
                 
-                drawBtn.disabled = true;
-                drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
+                syncStateToFirebase();
                 
-                isAutoMode = true;
-                drawNumber(); 
-                timerWorker.postMessage({ command: 'start', ms: 3000 });
-                
-                // Forzar a que el celular mantenga el hilo de internet vivo usando el audio silencioso
-                keepAliveAudio.play().catch(e => console.log('Auto-play silenciado', e));
-                requestWakeLock(); // Refrescamos el WakeLock por si acaso
+                if (adminRenderInterval) clearInterval(adminRenderInterval);
+                adminRenderInterval = setInterval(adminRenderLoop, 100);
                 
                 autoBtn.classList.replace('bg-emerald-600', 'bg-rose-600');
                 autoBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-rose-700');
                 autoBtn.innerHTML = `${pauseIconSVG} Pausar Automático`;
+                
+                drawBtn.disabled = true;
+                drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
+            }
         }
-    }
 
-    function showToast(message, isError = false) {
-        let toast = document.getElementById('toast-notification');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'toast-notification';
-            document.body.appendChild(toast);
-        }
-        toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-white text-sm font-medium shadow-xl z-[9999] transition-all duration-300 opacity-100 translate-y-0 text-center w-11/12 max-w-sm ${isError ? 'bg-rose-600' : 'bg-slate-800'}`;
-        toast.innerText = message;
-        
-        setTimeout(() => {
-            toast.classList.replace('opacity-100', 'opacity-0');
-            toast.classList.replace('translate-y-0', 'translate-y-4');
-        }, 4500);
+        function showToast(message, isError = false) {
     }
 
     function openPublicWindow() {
@@ -1047,6 +1102,7 @@
             calledNumbers = [];
             currentNumber = null;
             isDrawing = false;
+            autoStartTime = 0;
             initDeck(); 
             
             // REINICIO -> Mostrar Publicidad
