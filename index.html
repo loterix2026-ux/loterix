@@ -30,6 +30,20 @@
             background: rgba(148, 163, 184, 0.5); 
             border-radius: 4px;
         }
+        /* Efecto destello para los números marcados en el cartón ganador */
+        .winner-cell-highlight {
+            position: relative;
+        }
+        .winner-cell-highlight::after {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border-radius: 50%;
+            border: 3px solid rgba(245, 158, 11, 0.8);
+            background: rgba(245, 158, 11, 0.15);
+            box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.3);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-[#FDFBF7] text-slate-800 selection:bg-amber-200">
@@ -80,6 +94,10 @@
             </div>
             
             <div class="mt-6 md:mt-0 flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto justify-center">
+                <a href="cuentas.html" target="_blank" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 px-4 rounded-2xl text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 w-full sm:w-auto" title="Gestión de Cuentas">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span class="hidden sm:inline">Cuentas</span>
+                </a>
                 <button id="admin-refresh-btn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 px-4 rounded-2xl text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2 w-full sm:w-auto" title="Actualizar conexión">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 </button>
@@ -186,13 +204,20 @@
             <!-- Panel Principal: Tablero de 90 Números -->
             <div class="lg:col-span-8 bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-4 sm:p-6 md:p-8 flex flex-col gap-4">
                 <div id="history-container" class="flex gap-2 sm:gap-3 overflow-x-auto pb-2 hidden shrink-0"></div>
+                
+                <!-- Pantalla del Ganador en el Panel de Control -->
+                <div id="admin-winner-display" class="hidden flex-col items-center justify-center flex-1 p-4 sm:p-8 bg-slate-50/80 rounded-2xl border border-slate-200 overflow-y-auto custom-scrollbar">
+                    <h2 class="text-3xl sm:text-5xl font-serif text-amber-500 drop-shadow-md mb-8 font-bold text-center animate-bounce">¡Tenemos Ganador!</h2>
+                    <div id="admin-winner-ticket-container" class="w-full flex flex-col items-center gap-8"></div>
+                </div>
+
                 <div id="bingo-grid" class="grid grid-cols-10 gap-1 sm:gap-2 md:gap-3 no-select flex-1"></div>
             </div>
 
         </main>
     </div>
 
-    <!-- VISTA PARA EL PÚBLICO (Oculta por defecto en control) -->
+    <!-- VISTA PARA EL PÚBLICO -->
     <div id="public-view" class="hidden fixed inset-0 bg-[#0B1121] z-[100] flex flex-col p-4 sm:p-6 lg:p-8 h-screen w-screen overflow-y-auto lg:overflow-hidden">
         
         <!-- Header Público -->
@@ -274,26 +299,35 @@
 
             <!-- Derecha: Texto de Publicidad y Video/Música -->
             <div class="w-full lg:w-8/12 flex flex-col gap-4 lg:gap-6 lg:h-full min-h-0">
-                <!-- Contenedor del Reproductor de Música/Video (MOVIDO ARRIBA) -->
                 <div class="flex-none lg:flex-1 bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden relative min-h-[250px] sm:min-h-[300px] lg:min-h-0">
-                    <!-- iframe con eventos de puntero desactivados y excluido de navegación por teclado -->
                     <iframe id="public-playlist-iframe" class="w-full h-full border-0 absolute inset-0 pointer-events-none" allow="autoplay; encrypted-media" tabindex="-1"></iframe>
-                    <!-- Capa transparente absoluta que intercepta físicamente cualquier clic o toque -->
                     <div class="absolute inset-0 z-10 w-full h-full bg-transparent"></div>
                 </div>
 
-                <!-- Texto Personalizado Gigante (MOVIDO ABAJO) -->
                 <div class="bg-gradient-to-r from-amber-500/20 to-emerald-500/20 backdrop-blur-md rounded-3xl border border-slate-600/50 p-4 sm:p-6 lg:p-10 flex items-center justify-center text-center shadow-2xl shrink-0 min-h-[100px] lg:min-h-[160px]">
                     <p id="public-ad-text" class="text-xl sm:text-2xl lg:text-4xl font-serif text-white font-medium drop-shadow-lg leading-tight">¡Bienvenidos al Gran Sorteo Loterix! Prepárate para ganar increíbles premios hoy.</p>
                 </div>
             </div>
         </div>
+
+        <!-- MODO 3: PANTALLA DE GANADOR(ES) -->
+        <div id="public-winner-view" class="absolute inset-0 z-[200] bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-start p-6 lg:p-12 transition-opacity duration-500 opacity-0 hidden overflow-y-auto custom-scrollbar">
+            <!-- Partículas/Fondo Brillante -->
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-500/20 via-slate-900/80 to-slate-900 pointer-events-none"></div>
+            
+            <h1 class="text-6xl sm:text-8xl lg:text-[8rem] font-serif text-amber-400 drop-shadow-[0_0_40px_rgba(245,158,11,1)] mb-2 animate-bounce z-10 mt-10">¡BINGO!</h1>
+            <p class="text-white text-xl sm:text-3xl lg:text-4xl font-medium tracking-widest uppercase z-10 mb-12">Tenemos Ganador</p>
+            
+            <div id="public-winners-container" class="flex flex-col gap-10 w-full max-w-6xl z-10 pb-20 items-center">
+                <!-- Tarjetas ganadoras generadas por JS -->
+            </div>
+        </div>
+
     </div>
 
     <!-- Modal de Ajustes y Publicidad -->
     <div id="settings-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[200] p-4 hidden opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-slate-100 transform scale-95 transition-transform duration-300" id="settings-modal-content">
-            
             <div class="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                 <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -305,7 +339,6 @@
             </div>
 
             <div class="p-5 overflow-y-auto custom-scrollbar flex-1 space-y-5">
-                
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -329,17 +362,12 @@
 
                 <div class="border-t border-slate-200 pt-4">
                     <label class="text-xs text-slate-700 font-bold uppercase tracking-wider block mb-3">Playlist de YouTube</label>
-                    
                     <div class="flex gap-2 mb-3">
                         <input type="text" id="new-track-input" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="Añadir enlace de YouTube...">
                         <button id="add-track-btn" class="bg-slate-800 hover:bg-slate-700 text-white px-4 rounded-lg text-sm font-medium transition-all">Añadir</button>
                     </div>
-                    
-                    <ul id="playlist-container" class="space-y-2 max-h-36 overflow-y-auto custom-scrollbar bg-slate-50 border border-slate-100 rounded-xl p-2">
-                        <!-- Items de la playlist se generan aquí -->
-                    </ul>
+                    <ul id="playlist-container" class="space-y-2 max-h-36 overflow-y-auto custom-scrollbar bg-slate-50 border border-slate-100 rounded-xl p-2"></ul>
                 </div>
-
             </div>
 
             <div class="p-5 border-t border-slate-100 shrink-0 bg-slate-50 rounded-b-3xl">
@@ -354,7 +382,7 @@
     <div id="reset-modal" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-[200] p-4 hidden opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-sm w-full border border-slate-100 transform scale-95 transition-transform duration-300" id="reset-modal-content">
             <h3 class="text-xl font-serif text-slate-900 mb-2">¿Reiniciar partida?</h3>
-            <p class="text-slate-500 mb-8 text-sm sm:text-base">Se borrará todo el historial de bolas extraídas. Esta acción no se puede deshacer.</p>
+            <p class="text-slate-500 mb-8 text-sm sm:text-base">Se borrará todo el historial de bolas extraídas y se reseteará el ganador. Esta acción no se puede deshacer.</p>
             <div class="flex gap-3">
                 <button id="cancel-reset-btn" class="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-3 rounded-full text-sm sm:text-base font-medium transition-all">Cancelar</button>
                 <button id="confirm-reset-btn" class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-full text-sm sm:text-base font-medium transition-all shadow-md">Sí, reiniciar</button>
@@ -362,14 +390,12 @@
         </div>
     </div>
 
-    <!-- Pista de audio silenciosa para engañar al celular y evitar que congele el sorteo al apagar la pantalla -->
     <audio id="keep-alive-audio" loop playsinline src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"></audio>
 
-    <!-- Script principal cambiado a módulo para usar Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -387,68 +413,166 @@
         const auth = getAuth(app);
 
         const gameDocRef = doc(db, 'artifacts', 'loterix', 'public', 'data', 'games', 'current');
+        const ticketsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'tickets');
         const isPublicView = new URLSearchParams(window.location.search).get('public') === 'true';
 
-        // Estado de la aplicación local
+        // Estado Global del Juego
         let calledNumbers = [];
         let currentNumber = null;
         let isDrawing = false;
         let isAutoMode = false;
         let deck = []; 
+        let winners = []; // Lista de ganadores detectados
+        let lastCheckedCalledCount = 0; // Para no verificar ganadores repetidas veces en el mismo turno
         
-        // --- Solución Definitiva: Estado Basado en Tiempo Matemático ---
+        let playingTickets = {}; // Guarda todos los cartones vendidos (solo los usa el administrador)
+
         let autoStartTime = 0;
-        let autoIntervalMsData = 3000; // Valor por defecto, se lee y actualiza de firebase
+        let autoIntervalMsData = 3000; 
         let adminRenderInterval = null;
         let currentFirebaseState = null;
         let publicRenderInterval = null;
 
-        // --- Solución 2: Wake Lock para evitar que se apague la pantalla ---
         let wakeLock = null;
         async function requestWakeLock() {
             try {
                 if ('wakeLock' in navigator) {
                     wakeLock = await navigator.wakeLock.request('screen');
-                    wakeLock.addEventListener('release', () => {
-                        console.log('Pantalla liberada');
-                    });
                 }
-            } catch (err) {
-                console.log('Wake Lock no soportado:', err.message);
-            }
+            } catch (err) { }
         }
 
-        // Reconectar la pantalla encendida si sales y vuelves a la pestaña
         document.addEventListener('visibilitychange', () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                requestWakeLock();
-            }
+            if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock();
         });
 
-        // Estado de Publicidad y Pantalla
+        // Estado Extra
         let showAdsData = true; 
         let prize1Data = "10.000 Bs.";
         let prize2Data = "5.000 Bs.";
         let qrUrlData = "https://wa.me/123456789";
         let adTextData = "¡Bienvenidos al Gran Sorteo Loterix! Prepárate para ganar increíbles premios hoy.";
-        
-        // Estado Playlist
         let playlistData = [];
         let activeTrackIndexData = 0;
-        
-        // Comandos multimedia
-        let mediaCommandData = null; // 'play' o 'pause'
-        let mediaCommandIdData = 0;  // Marca de tiempo para detectar cuándo se presiona el botón
-        let lastExecutedMediaId = 0; // Para el público, recordar qué comando ya ejecutó
+        let mediaCommandData = null; 
+        let mediaCommandIdData = 0;  
+        let lastExecutedMediaId = 0; 
 
-        const loadingOverlay = document.getElementById('loading-overlay');
-        const loginView = document.getElementById('login-view');
-        const controlView = document.getElementById('control-view');
-        const publicView = document.getElementById('public-view');
-        const settingsModal = document.getElementById('settings-modal');
-        const settingsModalContent = document.getElementById('settings-modal-content');
+        // ----- UTILIDADES DE CARTONES Y MATEMÁTICAS -----
+        const colorThemes = {
+            green: { text: 'text-emerald-600', borderOuter: 'border-emerald-500', borderInner: 'border-emerald-400', emptyBg: 'bg-emerald-200/50' },
+            red: { text: 'text-rose-600', borderOuter: 'border-rose-600', borderInner: 'border-rose-500', emptyBg: 'bg-rose-200/50' },
+            blue: { text: 'text-blue-700', borderOuter: 'border-blue-600', borderInner: 'border-blue-500', emptyBg: 'bg-blue-200/50' },
+            yellow: { text: 'text-amber-600', borderOuter: 'border-amber-500', borderInner: 'border-amber-400', emptyBg: 'bg-amber-100/60' },
+            gray: { text: 'text-slate-400', borderOuter: 'border-slate-300', borderInner: 'border-slate-200', emptyBg: 'bg-slate-100/60' }
+        };
 
-        // Algoritmo de Estado Derivado: Calcula exactamente qué bola debería estar en pantalla
+        function mulberry32(a) {
+            return function() {
+              var t = a += 0x6D2B79F5;
+              t = Math.imul(t ^ t >>> 15, t | 1);
+              t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+              return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        function generateTicketData(ticketId) {
+            const random = mulberry32(ticketId * 98765); 
+            const ticket = [Array(9).fill(null), Array(9).fill(null), Array(9).fill(null)];
+            for (let r = 0; r < 3; r++) {
+                let cols = [0,1,2,3,4,5,6,7,8];
+                for (let i = cols.length - 1; i > 0; i--) {
+                    const j = Math.floor(random() * (i + 1));
+                    [cols[i], cols[j]] = [cols[j], cols[i]];
+                }
+                let selectedCols = cols.slice(0, 5).sort((a,b)=>a-b);
+                selectedCols.forEach(c => {
+                    let min = c === 0 ? 1 : c * 10;
+                    let max = c === 8 ? 90 : (c * 10) + 9;
+                    let num;
+                    let attempts = 0;
+                    do { num = Math.floor(random() * (max - min + 1)) + min; attempts++; } 
+                    while ((ticket[0][c] === num || ticket[1][c] === num || ticket[2][c] === num) && attempts < 20);
+                    ticket[r][c] = num;
+                });
+            }
+            for (let c = 0; c < 9; c++) {
+                let colNums = [];
+                if (ticket[0][c]) colNums.push(ticket[0][c]);
+                if (ticket[1][c]) colNums.push(ticket[1][c]);
+                if (ticket[2][c]) colNums.push(ticket[2][c]);
+                colNums.sort((a,b) => a-b);
+                let idx = 0;
+                if (ticket[0][c] !== null) ticket[0][c] = colNums[idx++];
+                if (ticket[1][c] !== null) ticket[1][c] = colNums[idx++];
+                if (ticket[2][c] !== null) ticket[2][c] = colNums[idx++];
+            }
+            return ticket;
+        }
+
+        function getTicketNumbers(ticketId) {
+            const matrix = generateTicketData(ticketId);
+            const nums = [];
+            for(let r=0; r<3; r++) {
+                for(let c=0; c<9; c++) {
+                    if(matrix[r][c] !== null) nums.push(matrix[r][c]);
+                }
+            }
+            return nums;
+        }
+
+        // Lógica de validación de ganadores
+        function checkWinners(currentCalled) {
+            let found = [];
+            if (currentCalled.length < 15) return found; // Imposible ganar antes de la bola 15
+            
+            for (const [ticketId, ticketData] of Object.entries(playingTickets)) {
+                const nums = getTicketNumbers(parseInt(ticketId));
+                // ¿Están los 15 números del cartón dentro de las bolas extraídas?
+                const isWinner = nums.every(n => currentCalled.includes(n));
+                if (isWinner) {
+                    found.push({ ticketId, ...ticketData });
+                    break; // REGLA AÑADIDA: Detener inmediatamente al encontrar el primer ganador (Evita dobles ganadores)
+                }
+            }
+            return found;
+        }
+
+        // Dibuja un cartón GIGANTE y deslumbrante para el ganador en la pantalla pública
+        function renderPublicWinnerTicket(ticketId, ownerName, colorKey, calledNums) {
+            const theme = colorThemes[colorKey] || colorThemes.green;
+            const matrix = generateTicketData(ticketId);
+
+            let html = `
+            <div class="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-4 sm:p-6 md:p-8 transform transition-all border-[6px] ${theme.borderOuter} w-full max-w-4xl mx-auto">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <span class="text-xl sm:text-3xl font-bold text-slate-400 uppercase tracking-widest">Cartón #${ticketId}</span>
+                    <span class="text-2xl sm:text-4xl font-bold font-serif text-slate-800 bg-slate-100 px-6 py-2 rounded-full shadow-inner border border-slate-200">Ganador: <span class="${theme.text}">${ownerName}</span></span>
+                </div>
+                <div class="bg-white border-[6px] ${theme.borderOuter} p-2 w-full">
+                    <div class="border-t-[3px] border-l-[3px] ${theme.borderInner}">
+            `;
+            
+            for (let r = 0; r < 3; r++) {
+                html += `<div class="grid grid-cols-9">`;
+                for (let c = 0; c < 9; c++) {
+                    const val = matrix[r][c];
+                    if (val === null) {
+                        html += `<div class="h-14 sm:h-20 md:h-24 lg:h-28 flex items-center justify-center border-r-[3px] border-b-[3px] ${theme.borderInner} ${theme.emptyBg}"></div>`;
+                    } else {
+                        // Resaltamos de forma especial los números que ya salieron (que en este caso son todos los 15)
+                        const isCalled = calledNums.includes(val);
+                        const highlightClass = isCalled ? 'winner-cell-highlight text-amber-600' : theme.text;
+                        html += `<div class="h-14 sm:h-20 md:h-24 lg:h-28 flex items-center justify-center border-r-[3px] border-b-[3px] ${theme.borderInner} bg-white font-bold ${highlightClass} text-3xl sm:text-5xl md:text-6xl">${val}</div>`;
+                    }
+                }
+                html += `</div>`;
+            }
+            html += `</div></div></div>`;
+            return html;
+        }
+
+        // ----- CORE DEL TABLERO VIRTUAL -----
         function computeDerivedState(baseCalled, baseDeck, baseCurrent, startTime, intervalMs) {
             if (!startTime) return { calledNumbers: baseCalled, deck: baseDeck, currentNumber: baseCurrent, isMixing: false, isFinished: false };
             
@@ -456,7 +580,6 @@
             let cycle = Math.floor(elapsed / intervalMs);
             let phase = elapsed % intervalMs;
             
-            // Tiempo de mezcla dinámico (máximo 1.5s, pero si el usuario elige 1s de intervalo, será 0.5s)
             let dynamicMixingMs = Math.min(1500, intervalMs / 2);
             let completedDraws = cycle + (phase >= dynamicMixingMs ? 1 : 0);
             completedDraws = Math.min(completedDraws, baseDeck.length);
@@ -484,31 +607,12 @@
             };
         }
 
-        function getEmbedUrl(url) {
-            if (!url) return "";
-            
-            let matchList = url.match(/[?&]list=([^#\&\?]+)/);
-            if (matchList && !url.includes('watch')) {
-                return `https://www.youtube.com/embed/videoseries?list=${matchList[1]}&autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
-            }
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loginView = document.getElementById('login-view');
+        const controlView = document.getElementById('control-view');
+        const publicView = document.getElementById('public-view');
 
-            let matchVid = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-            if (matchVid) {
-                let base = `https://www.youtube.com/embed/${matchVid[1]}?autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
-                if (matchList) {
-                    base += `&list=${matchList[1]}`;
-                } else {
-                    base += `&loop=1&playlist=${matchVid[1]}`;
-                }
-                return base;
-            }
-
-            let matchSpot = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
-            if (matchSpot) return `https://open.spotify.com/embed/playlist/${matchSpot[1]}?utm_source=generator&theme=0`;
-            
-            return url;
-        }
-
+        // ----- FLUJO DE INICIO Y PUBLICO -----
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const user = document.getElementById('login-user').value.trim().toLowerCase();
@@ -567,22 +671,16 @@
                         }, 500);
                     }
                 }
-
             } catch (error) {
                 console.error("Error conectando con Firebase:", error);
-                alert("No se pudo conectar al servidor. Revisa tu configuración.");
+                alert("No se pudo conectar al servidor.");
             }
         }
 
-        /* =========================================
-           MODO: PANTALLA DE PÚBLICO
-           ========================================= */
         function initPublicView() {
             controlView.style.display = 'none';
             publicView.classList.remove('hidden');
-            
             document.getElementById('public-refresh-btn').addEventListener('click', () => window.location.reload());
-            
             const publicGrid = document.getElementById('public-grid');
             
             for (let i = 1; i <= 90; i++) {
@@ -604,8 +702,6 @@
                         updatePublicUI(currentFirebaseState);
                     }
                 }
-            }, (error) => {
-                console.error("Error al leer datos: ", error);
             });
         }
 
@@ -628,10 +724,29 @@
         function updatePublicUI(state) {
             const publicCurrentText = document.getElementById('public-current-text');
             const publicTotalCalled = document.getElementById('public-total-called');
-            
             const gameContent = document.getElementById('public-game-content');
             const adContent = document.getElementById('public-ad-content');
+            const winnerView = document.getElementById('public-winner-view');
+            const winnersContainer = document.getElementById('public-winners-container');
 
+            // Lógica de Ganador
+            if (state.winners && state.winners.length > 0) {
+                gameContent.classList.add('hidden');
+                adContent.classList.add('hidden');
+                winnerView.classList.remove('hidden');
+                setTimeout(() => winnerView.classList.remove('opacity-0'), 50);
+                
+                winnersContainer.innerHTML = '';
+                state.winners.forEach(w => {
+                    winnersContainer.innerHTML += renderPublicWinnerTicket(w.ticketId, w.ownerName, w.color, state.calledNumbers);
+                });
+                return; // Cortamos aquí para que no dibuje más nada del sorteo
+            } else {
+                winnerView.classList.add('opacity-0');
+                setTimeout(() => winnerView.classList.add('hidden'), 500);
+            }
+
+            // Normal Public View
             if (state.showAds === false) {
                 adContent.classList.add('hidden');
                 gameContent.classList.remove('hidden');
@@ -653,7 +768,6 @@
             document.getElementById('public-prize-1').innerText = state.prize1 || "10.000 Bs.";
             document.getElementById('public-prize-2').innerText = state.prize2 || "5.000 Bs.";
             document.getElementById('public-ad-text').innerText = state.adText || "¡Bienvenidos al Gran Sorteo Loterix!";
-            
             const qrLink = state.qrUrl || "https://wa.me/123456789";
             document.getElementById('public-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrLink)}&color=0f172a&bgcolor=ffffff`;
 
@@ -677,11 +791,8 @@
             if (state.mediaCommandId && state.mediaCommandId !== lastExecutedMediaId) {
                 lastExecutedMediaId = state.mediaCommandId;
                 if (iframe && iframe.contentWindow) {
-                    if (state.mediaCommand === 'play') {
-                        iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-                    } else if (state.mediaCommand === 'pause') {
-                        iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-                    }
+                    if (state.mediaCommand === 'play') iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                    else if (state.mediaCommand === 'pause') iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
                 }
             }
 
@@ -701,13 +812,20 @@
             }
         }
 
-
         /* =========================================
-           MODO: TABLERO DE CONTROL
+           MODO: TABLERO DE CONTROL (ADMIN)
            ========================================= */
         async function initControlView() {
             initDeck();
             initGrid();
+
+            // Descargar qué cartones están activos en la BD para validarlos
+            onSnapshot(ticketsCollectionRef, (snapshot) => {
+                playingTickets = {};
+                snapshot.forEach(docSnap => {
+                    playingTickets[docSnap.id] = docSnap.data();
+                });
+            });
 
             const docSnap = await getDoc(gameDocRef);
             if (docSnap.exists()) {
@@ -715,12 +833,15 @@
                 calledNumbers = state.calledNumbers || [];
                 currentNumber = state.currentNumber || null;
                 deck = state.deck || [];
+                winners = state.winners || [];
                 
                 isDrawing = false; 
                 isAutoMode = state.isAutoMode || false;
                 autoStartTime = state.autoStartTime || 0;
                 autoIntervalMsData = state.autoIntervalMs || 3000;
                 
+                lastCheckedCalledCount = calledNumbers.length; // Guardar hito actual para validación
+
                 showAdsData = state.showAds !== undefined ? state.showAds : true;
                 prize1Data = state.prize1 || "10.000 Bs.";
                 prize2Data = state.prize2 || "5.000 Bs.";
@@ -730,11 +851,6 @@
                 playlistData = state.playlist || (state.playlistUrl ? [state.playlistUrl] : []);
                 activeTrackIndexData = state.activeTrackIndex || 0;
 
-                document.getElementById('prize-1-input').value = prize1Data;
-                document.getElementById('prize-2-input').value = prize2Data;
-                document.getElementById('qr-input').value = qrUrlData;
-                document.getElementById('ad-text-input').value = adTextData;
-                
                 const timeSelect = document.getElementById('auto-time-select');
                 if (timeSelect) {
                     timeSelect.value = autoIntervalMsData.toString();
@@ -768,16 +884,12 @@
                 drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
                 if (adminRenderInterval) clearInterval(adminRenderInterval);
                 adminRenderInterval = setInterval(adminRenderLoop, 100);
-            } else {
-                const autoBtn = document.getElementById('auto-btn');
-                const seconds = autoIntervalMsData / 1000;
-                autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg> <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
             }
         }
 
-        async function syncStateToFirebase() {
+        async function syncStateToFirebase(customWinners = null) {
             try {
-                await setDoc(gameDocRef, {
+                let data = {
                     calledNumbers: calledNumbers,
                     currentNumber: currentNumber,
                     deck: deck,
@@ -795,68 +907,35 @@
                     mediaCommand: mediaCommandData,
                     mediaCommandId: mediaCommandIdData,
                     timestamp: new Date().getTime() 
-                });
+                };
+
+                if (customWinners !== null) {
+                    data.winners = customWinners;
+                } else if (winners.length > 0) {
+                    data.winners = winners;
+                } else {
+                    data.winners = []; // Borrar de BD si reseteamos
+                }
+
+                await setDoc(gameDocRef, data);
             } catch (e) {
                 console.error("Error guardando: ", e);
             }
         }
 
-        function renderPlaylistUI() {
-            const container = document.getElementById('playlist-container');
-            container.innerHTML = '';
-            
-            if (playlistData.length === 0) {
-                container.innerHTML = '<li class="text-xs text-slate-400 text-center py-4">No hay temas añadidos. Añade un enlace arriba.</li>';
-                return;
+        function getEmbedUrl(url) {
+            if (!url) return "";
+            let matchList = url.match(/[?&]list=([^#\&\?]+)/);
+            if (matchList && !url.includes('watch')) return `https://www.youtube.com/embed/videoseries?list=${matchList[1]}&autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
+            let matchVid = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+            if (matchVid) {
+                let base = `https://www.youtube.com/embed/${matchVid[1]}?autoplay=1&enablejsapi=1&controls=0&disablekb=1`;
+                if (matchList) base += `&list=${matchList[1]}`; else base += `&loop=1&playlist=${matchVid[1]}`;
+                return base;
             }
-
-            playlistData.forEach((url, index) => {
-                const li = document.createElement('li');
-                const isActive = index === activeTrackIndexData;
-                
-                let displayUrl = url.replace(/(^\w+:|^)\/\//, '').replace('www.youtube.com/watch?v=', 'Youtube: ');
-                if (displayUrl.length > 35) displayUrl = displayUrl.substring(0, 35) + '...';
-
-                li.className = `flex justify-between items-center p-2.5 rounded-lg border text-sm transition-all ${isActive ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-slate-200'}`;
-                
-                li.innerHTML = `
-                    <div class="flex items-center gap-2 overflow-hidden flex-1">
-                        ${isActive ? '<svg class="w-4 h-4 text-indigo-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' : '<svg class="w-4 h-4 text-slate-300 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4Z"/></svg>'}
-                        <span class="${isActive ? 'text-indigo-900 font-semibold' : 'text-slate-600'} truncate" title="${url}">${displayUrl}</span>
-                    </div>
-                    <div class="flex gap-1.5 shrink-0 ml-2">
-                        <button class="play-track-btn p-1.5 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors" data-index="${index}" title="Reproducir este tema">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        </button>
-                        <button class="del-track-btn p-1.5 bg-rose-50 text-rose-600 rounded hover:bg-rose-100 transition-colors" data-index="${index}" title="Eliminar de la lista">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(li);
-            });
-
-            document.querySelectorAll('.play-track-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    activeTrackIndexData = parseInt(e.currentTarget.dataset.index);
-                    mediaCommandData = 'play'; 
-                    mediaCommandIdData = Date.now();
-                    renderPlaylistUI();
-                    await syncStateToFirebase();
-                });
-            });
-
-            document.querySelectorAll('.del-track-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const idx = parseInt(e.currentTarget.dataset.index);
-                    playlistData.splice(idx, 1);
-                    if (activeTrackIndexData >= playlistData.length) {
-                        activeTrackIndexData = Math.max(0, playlistData.length - 1);
-                    }
-                    renderPlaylistUI();
-                    await syncStateToFirebase();
-                });
-            });
+            let matchSpot = url.match(/spotify\.com\/playlist\/([a-zA-Z0-9]+)/);
+            if (matchSpot) return `https://open.spotify.com/embed/playlist/${matchSpot[1]}?utm_source=generator&theme=0`;
+            return url;
         }
 
         function initDeck() {
@@ -890,9 +969,40 @@
             }
         }
 
+        // Loop súper seguro que además comprueba ganadores
         function adminRenderLoop() {
             if (!isAutoMode) return;
             const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime, autoIntervalMsData);
+            
+            // Verificamos ganadores SOLAMENTE cuando sale un nuevo número (cambia el tamaño de bolas extraidas)
+            if (derived.calledNumbers.length > lastCheckedCalledCount) {
+                lastCheckedCalledCount = derived.calledNumbers.length;
+                let foundWinners = checkWinners(derived.calledNumbers);
+                
+                if (foundWinners.length > 0) {
+                    // ¡HAY GANADOR! PARADA DE EMERGENCIA DEL AUTOMÁTICO
+                    calledNumbers = derived.calledNumbers;
+                    deck = derived.deck;
+                    currentNumber = derived.currentNumber;
+                    winners = foundWinners; // Guardamos en local variable para la UI
+                    
+                    isAutoMode = false;
+                    autoStartTime = 0;
+                    if (adminRenderInterval) { clearInterval(adminRenderInterval); adminRenderInterval = null; }
+                    
+                    syncStateToFirebase(winners); 
+                    updateUI(); 
+                    showToast("¡BINGO! Sorteo Detenido.");
+                    
+                    // Restaurar botón de automode a estado apagado pero inhabilitado
+                    const autoBtn = document.getElementById('auto-btn');
+                    autoBtn.innerHTML = `Ganador Encontrado`;
+                    autoBtn.classList.replace('bg-rose-600', 'bg-slate-400');
+                    autoBtn.disabled = true;
+                    return;
+                }
+            }
+
             updateUI(derived);
             
             if (derived.isFinished) {
@@ -909,32 +1019,81 @@
             const currentBallText = document.getElementById('current-ball-text');
             const trophyIcon = document.getElementById('trophy-icon');
             const currentBallContainer = document.getElementById('current-ball-container');
+            const drawBtn = document.getElementById('draw-btn');
 
             document.getElementById('total-called').innerText = activeCalled.length;
             document.getElementById('total-remaining').innerText = 90 - activeCalled.length;
 
-            if (activeMixing) {
+            // UI si ya hay un ganador
+            if (winners.length > 0) {
+                currentBallText.style.display = 'block';
+                currentBallText.innerText = "BINGO";
+                currentBallText.className = "text-3xl sm:text-4xl font-serif text-rose-600 transition-opacity";
+                trophyIcon.style.display = 'none';
+                
+                currentBallContainer.classList.remove('bg-slate-50', 'animate-pulse');
+                currentBallContainer.classList.add('bg-rose-50', 'border-rose-200');
+                
+                drawBtn.innerHTML = '¡Juego Terminado (GANADOR)!';
+                drawBtn.disabled = true;
+                drawBtn.classList.replace('bg-slate-900', 'bg-rose-600');
+                document.getElementById('auto-btn').disabled = true;
+
+                // Ocultar tablero normal y mostrar el cartón ganador en el admin
+                document.getElementById('bingo-grid').style.display = 'none';
+                const winnerDisplay = document.getElementById('admin-winner-display');
+                winnerDisplay.classList.remove('hidden');
+                winnerDisplay.classList.add('flex');
+                
+                const container = document.getElementById('admin-winner-ticket-container');
+                container.innerHTML = '';
+                winners.forEach(w => {
+                    container.innerHTML += renderPublicWinnerTicket(w.ticketId, w.ownerName, w.color, activeCalled);
+                });
+            } 
+            // Animación de Mezcla
+            else if (activeMixing) {
+                document.getElementById('bingo-grid').style.display = 'grid';
+                const winnerDisplay = document.getElementById('admin-winner-display');
+                if (winnerDisplay) {
+                    winnerDisplay.classList.add('hidden');
+                    winnerDisplay.classList.remove('flex');
+                }
+
                 trophyIcon.style.display = 'none';
                 currentBallText.style.display = 'block';
                 currentBallText.innerText = Math.floor(Math.random() * 90) + 1;
-                currentBallText.classList.add('opacity-50');
+                currentBallText.className = "text-6xl sm:text-7xl font-serif text-slate-800 opacity-50 transition-opacity";
                 currentBallContainer.classList.remove('bg-slate-50');
                 currentBallContainer.classList.add('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md', 'animate-pulse');
                 document.getElementById('ball-wrapper').classList.replace('scale-100', 'scale-95');
-            } else {
+            } 
+            // Visualización normal del número final
+            else {
+                document.getElementById('bingo-grid').style.display = 'grid';
+                const winnerDisplay = document.getElementById('admin-winner-display');
+                if (winnerDisplay) {
+                    winnerDisplay.classList.add('hidden');
+                    winnerDisplay.classList.remove('flex');
+                }
+
                 document.getElementById('ball-wrapper').classList.replace('scale-95', 'scale-100');
                 if (activeCurrent) {
                     trophyIcon.style.display = 'none';
                     currentBallText.style.display = 'block';
                     currentBallText.innerText = activeCurrent;
-                    currentBallText.classList.remove('opacity-50');
-                    currentBallContainer.classList.remove('bg-slate-50', 'animate-pulse');
-                    currentBallContainer.classList.add('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md');
+                    currentBallText.className = "text-6xl sm:text-7xl font-serif text-slate-800 transition-opacity";
+                    currentBallContainer.className = "absolute inset-2 rounded-full bg-gradient-to-br from-white to-slate-100 flex items-center justify-center border border-slate-100 shadow-md transition-all duration-300";
                 } else {
                     currentBallText.style.display = 'none';
                     trophyIcon.style.display = 'block';
-                    currentBallContainer.classList.add('bg-slate-50');
-                    currentBallContainer.classList.remove('bg-gradient-to-br', 'from-white', 'to-slate-100', 'shadow-md', 'animate-pulse');
+                    currentBallContainer.className = "absolute inset-2 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 transition-all duration-300";
+                }
+                
+                // Restituir botones si no hay ganador y si no está en auto
+                if (!isAutoMode) {
+                    document.getElementById('auto-btn').disabled = false;
+                    drawBtn.classList.replace('bg-rose-600', 'bg-slate-900');
                 }
             }
 
@@ -946,7 +1105,7 @@
                 cell.innerHTML = i;
 
                 if (isLast) {
-                    cell.className = 'relative aspect-square rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-sm md:text-lg lg:text-xl transition-all duration-500 bg-amber-500 text-white shadow-lg shadow-amber-500/40 scale-110 sm:scale-110 z-10 font-bold border-none';
+                    cell.className = 'relative aspect-square rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-sm md:text-lg lg:text-xl transition-all duration-500 bg-amber-500 text-white shadow-lg shadow-amber-500/40 scale-110 z-10 font-bold border-none';
                     cell.innerHTML = `<span class="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full shadow-sm animate-ping"></span>${i}`;
                 } else if (isCalled) {
                     cell.className = 'relative aspect-square rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-sm md:text-lg lg:text-xl font-medium transition-all duration-500 bg-amber-100 text-amber-900 border-amber-200 shadow-inner';
@@ -957,6 +1116,7 @@
         }
 
         function drawNumber() {
+            if (winners.length > 0) return; // Si ya hay ganador, no avanza
             if (deck.length === 0 || calledNumbers.length >= 90) {
                 if (isAutoMode) toggleAutoMode();
                 return;
@@ -969,8 +1129,6 @@
             syncStateToFirebase();
 
             const drawBtn = document.getElementById('draw-btn');
-            const playIconSVG = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-
             drawBtn.disabled = true;
             drawBtn.innerHTML = '<span class="animate-pulse">Mezclando...</span>';
 
@@ -986,21 +1144,32 @@
                     calledNumbers.unshift(newNumber);
                     currentNumber = newNumber;
                     isDrawing = false;
+                    lastCheckedCalledCount = calledNumbers.length;
                     
-                    updateUI();
-                    syncStateToFirebase(); 
-                    
-                    if (calledNumbers.length === 90) {
-                        drawBtn.innerHTML = 'Juego Terminado';
+                    // Chequeo de Ganador en manual
+                    let foundWinners = checkWinners(calledNumbers);
+                    if (foundWinners.length > 0) {
+                        winners = foundWinners;
+                        syncStateToFirebase(winners); 
+                        updateUI();
+                        showToast("¡BINGO! Tenemos un ganador.");
                     } else {
-                        drawBtn.disabled = false;
-                        drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
+                        updateUI();
+                        syncStateToFirebase(); 
+                        if (calledNumbers.length === 90) {
+                            drawBtn.innerHTML = 'Juego Terminado';
+                        } else {
+                            drawBtn.disabled = false;
+                            const playIconSVG = `<svg class="w-5 h-5 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+                            drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
+                        }
                     }
                 }
             }, 100);
         }
 
         function toggleAutoMode() {
+            if (winners.length > 0) return; // Bloquear si hay ganador
             const autoBtn = document.getElementById('auto-btn');
             const drawBtn = document.getElementById('draw-btn');
             const timeSelect = document.getElementById('auto-time-select');
@@ -1008,10 +1177,8 @@
 
             const autoPlayIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg>`;
             const pauseIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
-            const playIconSVG = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 
             if (isAutoMode) {
-                // PAUSADO
                 const derived = computeDerivedState(calledNumbers, deck, currentNumber, autoStartTime, autoIntervalMsData);
                 calledNumbers = derived.calledNumbers;
                 deck = derived.deck;
@@ -1030,25 +1197,19 @@
                 autoBtn.classList.replace('bg-rose-600', 'bg-emerald-600');
                 autoBtn.classList.replace('hover:bg-rose-700', 'hover:bg-emerald-700');
                 autoBtn.innerHTML = `${autoPlayIconSVG} <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
-                
                 timeSelect.disabled = false;
                 timeSelect.classList.remove('opacity-50', 'cursor-not-allowed');
                 
                 if (calledNumbers.length < 90) {
                     drawBtn.disabled = false;
-                    drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
-                } else {
-                    drawBtn.innerHTML = 'Juego Terminado';
+                    drawBtn.innerHTML = `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Sacar Siguiente Bola`;
                 }
             } else {
-                // INICIADO
                 if (calledNumbers.length >= 90) return;
-                
                 isAutoMode = true;
                 autoStartTime = Date.now();
                 showAdsData = false;
                 updateToggleBtnUI();
-                
                 syncStateToFirebase();
                 
                 if (adminRenderInterval) clearInterval(adminRenderInterval);
@@ -1057,78 +1218,12 @@
                 autoBtn.classList.replace('bg-emerald-600', 'bg-rose-600');
                 autoBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-rose-700');
                 autoBtn.innerHTML = `${pauseIconSVG} <span class="hidden sm:inline">Pausar</span> Automático`;
-                
                 timeSelect.disabled = true;
                 timeSelect.classList.add('opacity-50', 'cursor-not-allowed');
 
                 drawBtn.disabled = true;
                 drawBtn.innerHTML = '<span class="animate-pulse">Modo Automático...</span>';
             }
-        }
-
-        function showToast(message, isError = false) {
-            let toast = document.getElementById('toast-notification');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'toast-notification';
-                document.body.appendChild(toast);
-            }
-            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-white text-sm font-medium shadow-xl z-[9999] transition-all duration-300 opacity-100 translate-y-0 text-center w-11/12 max-w-sm ${isError ? 'bg-rose-600' : 'bg-slate-800'}`;
-            toast.innerText = message;
-            
-            setTimeout(() => {
-                toast.classList.replace('opacity-100', 'opacity-0');
-                toast.classList.replace('translate-y-0', 'translate-y-4');
-            }, 4500);
-        }
-
-        function openPublicWindow() {
-            const urlObj = new URL(window.location.href);
-            urlObj.searchParams.set('public', 'true');
-            const finalUrl = urlObj.toString();
-            
-            const newWindow = window.open(finalUrl, '_blank'); 
-            
-            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                const textArea = document.createElement("textarea");
-                textArea.value = finalUrl;
-                textArea.style.position = "fixed";
-                textArea.style.top = "0";
-                textArea.style.left = "0";
-                textArea.style.opacity = "0";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                
-                try {
-                    document.execCommand('copy');
-                    showToast("Brave bloqueó la pestaña. Enlace copiado al portapapeles, pégalo en una pestaña nueva.");
-                } catch (err) {
-                    showToast("Ventana bloqueada. Por favor permite los pop-ups en tu navegador.", true);
-                }
-                
-                document.body.removeChild(textArea);
-            }
-        }
-
-        function showModal() {
-            const resetModal = document.getElementById('reset-modal');
-            const resetModalContent = document.getElementById('reset-modal-content');
-            resetModal.classList.remove('hidden');
-            setTimeout(() => {
-                resetModal.classList.remove('opacity-0');
-                resetModalContent.classList.remove('scale-95');
-                resetModalContent.classList.add('scale-100');
-            }, 10);
-        }
-
-        function hideModal() {
-            const resetModal = document.getElementById('reset-modal');
-            const resetModalContent = document.getElementById('reset-modal-content');
-            resetModal.classList.add('opacity-0');
-            resetModalContent.classList.remove('scale-100');
-            resetModalContent.classList.add('scale-95');
-            setTimeout(() => resetModal.classList.add('hidden'), 300);
         }
 
         async function handleReset() {
@@ -1138,23 +1233,57 @@
             currentNumber = null;
             isDrawing = false;
             autoStartTime = 0;
+            winners = []; // Vaciamos ganador
+            lastCheckedCalledCount = 0;
             initDeck(); 
             
             showAdsData = true;
             updateToggleBtnUI();
             
             const drawBtn = document.getElementById('draw-btn');
-            const playIconSVG = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+            drawBtn.classList.replace('bg-rose-600', 'bg-slate-900');
             drawBtn.disabled = false;
-            drawBtn.innerHTML = `${playIconSVG} Sacar Siguiente Bola`;
+            drawBtn.innerHTML = `<svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Sacar Siguiente Bola`;
 
             const autoBtn = document.getElementById('auto-btn');
             const seconds = autoIntervalMsData / 1000;
+            autoBtn.classList.replace('bg-slate-400', 'bg-emerald-600');
+            autoBtn.disabled = false;
             autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg> <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
 
             updateUI();
-            await syncStateToFirebase(); 
+            await syncStateToFirebase(null); // Pasamos null explícito para que limpie DB
             hideModal();
+        }
+
+        // Resto de la UI Helper ...
+        function showToast(message, isError = false) {
+            let toast = document.getElementById('toast-notification');
+            if (!toast) { toast = document.createElement('div'); toast.id = 'toast-notification'; document.body.appendChild(toast); }
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full text-white text-sm font-medium shadow-xl z-[9999] transition-all duration-300 opacity-100 translate-y-0 text-center w-11/12 max-w-sm ${isError ? 'bg-rose-600' : 'bg-slate-800'}`;
+            toast.innerText = message;
+            setTimeout(() => { toast.classList.replace('opacity-100', 'opacity-0'); toast.classList.replace('translate-y-0', 'translate-y-4'); }, 4500);
+        }
+
+        function openPublicWindow() {
+            const urlObj = new URL(window.location.href);
+            urlObj.searchParams.set('public', 'true');
+            window.open(urlObj.toString(), '_blank'); 
+        }
+
+        function showModal() {
+            const resetModal = document.getElementById('reset-modal');
+            const resetModalContent = document.getElementById('reset-modal-content');
+            resetModal.classList.remove('hidden');
+            setTimeout(() => { resetModal.classList.remove('opacity-0'); resetModalContent.classList.replace('scale-95', 'scale-100'); }, 10);
+        }
+
+        function hideModal() {
+            const resetModal = document.getElementById('reset-modal');
+            const resetModalContent = document.getElementById('reset-modal-content');
+            resetModal.classList.add('opacity-0');
+            resetModalContent.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => resetModal.classList.add('hidden'), 300);
         }
 
         function setupEventListeners() {
@@ -1165,61 +1294,15 @@
             document.getElementById('open-reset-btn').addEventListener('click', showModal);
             document.getElementById('cancel-reset-btn').addEventListener('click', hideModal);
             document.getElementById('confirm-reset-btn').addEventListener('click', handleReset);
-            document.getElementById('reset-modal').addEventListener('click', (e) => {
-                if (e.target.id === 'reset-modal') hideModal();
-            });
+            document.getElementById('reset-modal').addEventListener('click', (e) => { if (e.target.id === 'reset-modal') hideModal(); });
 
-            // Evento para el cambio de tiempo automático
             document.getElementById('auto-time-select').addEventListener('change', async (e) => {
                 autoIntervalMsData = parseInt(e.target.value);
-                const autoBtn = document.getElementById('auto-btn');
-                const seconds = autoIntervalMsData / 1000;
-                
-                if (!isAutoMode) {
-                    const autoPlayIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg>`;
-                    autoBtn.innerHTML = `${autoPlayIconSVG} <span class="hidden sm:inline">Automático</span> (${seconds}s)`;
+                if (!isAutoMode && winners.length === 0) {
+                    const autoBtn = document.getElementById('auto-btn');
+                    autoBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21l-5.94 5.94"/></svg> <span class="hidden sm:inline">Automático</span> (${autoIntervalMsData / 1000}s)`;
                 }
-                
                 await syncStateToFirebase();
-            });
-
-            function openSettingsModal() {
-                document.getElementById('prize-1-input').value = prize1Data;
-                document.getElementById('prize-2-input').value = prize2Data;
-                document.getElementById('qr-input').value = qrUrlData;
-                document.getElementById('ad-text-input').value = adTextData;
-                renderPlaylistUI();
-
-                settingsModal.classList.remove('hidden');
-                setTimeout(() => {
-                    settingsModal.classList.remove('opacity-0');
-                    settingsModalContent.classList.remove('scale-95');
-                    settingsModalContent.classList.add('scale-100');
-                }, 10);
-            }
-
-            function closeSettingsModal() {
-                settingsModal.classList.add('opacity-0');
-                settingsModalContent.classList.remove('scale-100');
-                settingsModalContent.classList.add('scale-95');
-                setTimeout(() => settingsModal.classList.add('hidden'), 300);
-            }
-
-            document.getElementById('open-settings-btn').addEventListener('click', openSettingsModal);
-            document.getElementById('close-settings-btn').addEventListener('click', closeSettingsModal);
-            settingsModal.addEventListener('click', (e) => {
-                if (e.target.id === 'settings-modal') closeSettingsModal();
-            });
-
-            document.getElementById('add-track-btn').addEventListener('click', async () => {
-                const input = document.getElementById('new-track-input');
-                const url = input.value.trim();
-                if (url) {
-                    playlistData.push(url);
-                    input.value = '';
-                    renderPlaylistUI();
-                    await syncStateToFirebase();
-                }
             });
 
             document.getElementById('toggle-screen-btn').addEventListener('click', () => {
@@ -1228,31 +1311,75 @@
                 syncStateToFirebase();
             });
 
-            document.getElementById('yt-play-btn').addEventListener('click', async () => {
-                mediaCommandData = 'play';
-                mediaCommandIdData = Date.now();
-                await syncStateToFirebase();
+            // Resto de los eventos del modal settings
+            const settingsModal = document.getElementById('settings-modal');
+            const settingsModalContent = document.getElementById('settings-modal-content');
+            
+            document.getElementById('open-settings-btn').addEventListener('click', () => {
+                document.getElementById('prize-1-input').value = prize1Data;
+                document.getElementById('prize-2-input').value = prize2Data;
+                document.getElementById('qr-input').value = qrUrlData;
+                document.getElementById('ad-text-input').value = adTextData;
+                renderPlaylistUI();
+                settingsModal.classList.remove('hidden');
+                setTimeout(() => { settingsModal.classList.remove('opacity-0'); settingsModalContent.classList.replace('scale-95', 'scale-100'); }, 10);
             });
-
-            document.getElementById('yt-pause-btn').addEventListener('click', async () => {
-                mediaCommandData = 'pause';
-                mediaCommandIdData = Date.now();
-                await syncStateToFirebase();
+            document.getElementById('close-settings-btn').addEventListener('click', () => {
+                settingsModal.classList.add('opacity-0');
+                settingsModalContent.classList.replace('scale-100', 'scale-95');
+                setTimeout(() => settingsModal.classList.add('hidden'), 300);
             });
-
             document.getElementById('update-info-btn').addEventListener('click', async () => {
                 prize1Data = document.getElementById('prize-1-input').value || "10.000 Bs.";
                 prize2Data = document.getElementById('prize-2-input').value || "5.000 Bs.";
                 qrUrlData = document.getElementById('qr-input').value || "https://wa.me/123456789";
                 adTextData = document.getElementById('ad-text-input').value || "¡Bienvenidos al Gran Sorteo Loterix!";
-                
                 await syncStateToFirebase();
-                closeSettingsModal();
+                document.getElementById('close-settings-btn').click();
+            });
+            document.getElementById('yt-play-btn').addEventListener('click', async () => { mediaCommandData = 'play'; mediaCommandIdData = Date.now(); await syncStateToFirebase(); });
+            document.getElementById('yt-pause-btn').addEventListener('click', async () => { mediaCommandData = 'pause'; mediaCommandIdData = Date.now(); await syncStateToFirebase(); });
+            document.getElementById('add-track-btn').addEventListener('click', async () => {
+                const url = document.getElementById('new-track-input').value.trim();
+                if (url) { playlistData.push(url); document.getElementById('new-track-input').value = ''; renderPlaylistUI(); await syncStateToFirebase(); }
             });
         }
 
-        initApp();
+        function renderPlaylistUI() {
+            const container = document.getElementById('playlist-container');
+            container.innerHTML = '';
+            if (playlistData.length === 0) {
+                container.innerHTML = '<li class="text-xs text-slate-400 text-center py-4">No hay temas añadidos.</li>';
+                return;
+            }
+            playlistData.forEach((url, index) => {
+                const li = document.createElement('li');
+                const isActive = index === activeTrackIndexData;
+                let displayUrl = url.replace(/(^\w+:|^)\/\//, '').replace('www.youtube.com/watch?v=', 'Youtube: ');
+                if (displayUrl.length > 35) displayUrl = displayUrl.substring(0, 35) + '...';
 
+                li.className = `flex justify-between items-center p-2.5 rounded-lg border text-sm transition-all ${isActive ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-slate-200'}`;
+                li.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden flex-1">
+                        ${isActive ? '<svg class="w-4 h-4 text-indigo-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' : '<svg class="w-4 h-4 text-slate-300 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4Z"/></svg>'}
+                        <span class="${isActive ? 'text-indigo-900 font-semibold' : 'text-slate-600'} truncate" title="${url}">${displayUrl}</span>
+                    </div>
+                    <div class="flex gap-1.5 shrink-0 ml-2">
+                        <button class="play-track-btn p-1.5 bg-emerald-50 text-emerald-600 rounded hover:bg-emerald-100 transition-colors" data-index="${index}" title="Reproducir">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        </button>
+                        <button class="del-track-btn p-1.5 bg-rose-50 text-rose-600 rounded hover:bg-rose-100 transition-colors" data-index="${index}" title="Eliminar">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(li);
+            });
+            document.querySelectorAll('.play-track-btn').forEach(b => b.addEventListener('click', async (e) => { activeTrackIndexData = parseInt(e.currentTarget.dataset.index); mediaCommandData = 'play'; mediaCommandIdData = Date.now(); renderPlaylistUI(); await syncStateToFirebase(); }));
+            document.querySelectorAll('.del-track-btn').forEach(b => b.addEventListener('click', async (e) => { playlistData.splice(parseInt(e.currentTarget.dataset.index), 1); if (activeTrackIndexData >= playlistData.length) activeTrackIndexData = Math.max(0, playlistData.length - 1); renderPlaylistUI(); await syncStateToFirebase(); }));
+        }
+
+        initApp();
     </script>
 </body>
 </html>
