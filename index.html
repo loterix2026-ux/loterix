@@ -242,9 +242,12 @@
                     <p id="public-ad-text" class="text-xl sm:text-2xl lg:text-4xl font-serif text-white font-medium drop-shadow-lg leading-tight">¡Bienvenidos al Gran Sorteo Loterix! Prepárate para ganar increíbles premios hoy.</p>
                 </div>
                 
-                <!-- Contenedor del Reproductor de Música/Video (pointer-events-none para que el público no interactúe) -->
-                <div class="flex-none lg:flex-1 bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden relative min-h-[250px] sm:min-h-[300px] lg:min-h-0 pointer-events-none">
-                    <iframe id="public-playlist-iframe" class="w-full h-full border-0 absolute inset-0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                <!-- Contenedor del Reproductor de Música/Video (Bloqueado) -->
+                <div class="flex-none lg:flex-1 bg-slate-900 rounded-3xl shadow-2xl border border-slate-700/50 overflow-hidden relative min-h-[250px] sm:min-h-[300px] lg:min-h-0">
+                    <!-- iframe con eventos de puntero desactivados y excluido de navegación por teclado -->
+                    <iframe id="public-playlist-iframe" class="w-full h-full border-0 absolute inset-0 pointer-events-none" allow="autoplay; encrypted-media" tabindex="-1"></iframe>
+                    <!-- Capa transparente absoluta que intercepta físicamente cualquier clic o toque -->
+                    <div class="absolute inset-0 z-10 w-full h-full bg-transparent"></div>
                 </div>
             </div>
         </div>
