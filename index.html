@@ -308,7 +308,9 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
         const gameDocRef = doc(db, 'artifacts', 'loterix', 'public', 'data', 'games', 'current');
-        const isPublicView = new URLSearchParams(window.location.search).get('public') === 'true';
+        
+        // CORRECCIÓN DEFINITIVA PARA MÓVILES: Leemos la URL completa directamente
+        const isPublicView = window.location.href.includes('public=true');
 
         let calledNumbers = [];
         let currentNumber = null;
@@ -586,7 +588,14 @@
                 }
                 updateToggleBtnUI(); syncStateToFirebase();
             };
-            document.getElementById('open-public-btn').onclick = () => window.open(window.location.href + '?public=true', '_blank');
+            
+            // CORRECCIÓN DEFINITIVA PARA MÓVILES: Construcción de URL limpia sin hashes
+            document.getElementById('open-public-btn').onclick = () => {
+                // Limpiamos cualquier parámetro o hash viejo que pueda tener la URL actual
+                const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+                window.open(cleanUrl + '?public=true', '_blank');
+            };
+
             document.getElementById('open-settings-btn').onclick = () => {
                 settingsModal.classList.remove('hidden');
                 setTimeout(() => { settingsModal.classList.remove('opacity-0'); settingsModalContent.classList.replace('scale-95', 'scale-100'); }, 10);
