@@ -559,8 +559,13 @@
 
         initAuth();
 
+        // 1. Evitar fugas de memoria con múltiples escuchadores de red
+        let firestoreUnsubscribe = null;
+
         function setupFirestoreListener() {
-            onSnapshot(gameDocRef, (docSnap) => {
+            if (firestoreUnsubscribe) firestoreUnsubscribe(); // Apagar si había uno encendido
+
+            firestoreUnsubscribe = onSnapshot(gameDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
@@ -947,10 +952,13 @@
             }
 
             let newNum;
-            // Optimización en la generación de la bola aleatoria
+            // 2. Guardián extremo anti loops infinitos en la generación aleatoria
             const drawnSet = new Set(gameState.drawnNumbers);
+            let safetyCounter = 0;
             do {
                 newNum = Math.floor(Math.random() * MAX_BALLS) + 1;
+                safetyCounter++;
+                if (safetyCounter > 1000) break; 
             } while (drawnSet.has(newNum));
 
             // Reproducir sonido para el administrador inmediatamente
@@ -1482,7 +1490,8 @@
                         ${cellsHTML}
                     </div>
                 </div>
-                <div class="card-overlay absolute inset-0 bg-slate-900/80 backdrop-blur-[2px] hidden flex-col items-center justify-center rounded-lg z-20 transition-all duration-300">
+                <!-- 3. REMOVIDO "backdrop-blur-[2px]" para liberar el 99% del procesador gráfico -->
+                <div class="card-overlay absolute inset-0 bg-slate-900/80 hidden flex-col items-center justify-center rounded-lg z-20 transition-all duration-300">
                     <div class="border-2 sm:border-4 border-casino-gold text-casino-gold font-black text-sm sm:text-xl lg:text-3xl px-3 py-1 sm:px-6 sm:py-2 rounded-xl -rotate-12 uppercase tracking-widest shadow-[0_0_30px_rgba(217,119,6,0.4)] bg-casino-dark/90">
                         Seleccionado
                     </div>
@@ -1786,7 +1795,8 @@
                                     cardWrap.classList.remove('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
                                     
                                     if (currentOwner === localPlayerAccountId) {
-                                        overlay.classList.remove('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                        // MI CARTÓN
+                                        overlay.classList.remove('hidden', 'bg-slate-900/80');
                                         overlay.classList.add('flex', 'bg-transparent', 'pointer-events-none');
                                         
                                         overlayText.textContent = "✓ MI CARTÓN";
@@ -1794,8 +1804,9 @@
                                         
                                         cardWrap.setAttribute('onclick', `window.customAlert('Mi Cartón', 'Ya tienes este cartón seleccionado. ¡Mucha suerte!')`);
                                     } else {
+                                        // CARTÓN DE OTRO JUGADOR - Ajustado para eliminar el blur destructivo de recursos
                                         overlay.classList.remove('hidden', 'bg-transparent', 'pointer-events-none');
-                                        overlay.classList.add('flex', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                        overlay.classList.add('flex', 'bg-slate-900/80');
                                         
                                         overlayText.textContent = "RESERVADO";
                                         overlayText.className = "border-2 sm:border-4 border-red-500 text-red-500 font-black text-sm sm:text-xl lg:text-3xl px-3 py-1 sm:px-6 sm:py-2 rounded-xl -rotate-12 uppercase tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.4)] bg-casino-dark/90 relative pointer-events-auto";
@@ -1803,8 +1814,9 @@
                                         cardWrap.setAttribute('onclick', `window.customAlert('Cartón Reservado', 'Este cartón ya ha sido reservado por otro jugador.')`);
                                     }
                                 } else {
+                                    // CARTÓN LIBRE - Ajustado
                                     overlay.classList.remove('flex', 'bg-transparent', 'pointer-events-none');
-                                    overlay.classList.add('hidden', 'bg-slate-900/80', 'backdrop-blur-[2px]');
+                                    overlay.classList.add('hidden', 'bg-slate-900/80');
                                     
                                     cardWrap.classList.add('hover:scale-[1.02]', 'hover:shadow-xl', 'cursor-pointer');
                                     cardWrap.setAttribute('onclick', `window.selectCard(${i})`);
