@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Loterix - Portal de Jugadores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.05); 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4); 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#FDFBF7] text-slate-800 selection:bg-indigo-200 flex flex-col">
+    
+    <!-- PANTALLA DE CARGA INICIAL -->
+    <div id="loading-overlay" class="fixed inset-0 bg-[#FDFBF7] z-[300] flex flex-col items-center justify-center transition-opacity duration-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 animate-pulse mb-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <h2 class="text-xl font-serif text-slate-800">Conectando con Loterix...</h2>
+        <p class="text-slate-400 text-sm mt-2">Sincronizando cartones</p>
+    </div>
+
+    <!-- PANTALLA DE LOGIN -->
+    <div id="login-view" class="hidden fixed inset-0 bg-[#FDFBF7] z-[50] flex flex-col items-center justify-center p-4 transition-opacity duration-300 opacity-0 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 sm:p-8 w-full max-w-sm text-center my-auto">
+            <div class="bg-indigo-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-indigo-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-serif text-slate-900 mb-2">Ingreso de Jugador</h2>
+            <p class="text-slate-500 text-xs sm:text-sm mb-8">Ingresa tus datos para elegir tus cartones.</p>
+            
+            <form id="login-form" class="flex flex-col gap-4 text-left">
+                <div>
+                    <label class="block text-[10px] sm:text-xs uppercase tracking-widest font-semibold text-slate-400 mb-1">Usuario</label>
+                    <input type="text" id="login-user" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" placeholder="Tu nombre de usuario" required>
+                </div>
+                <div>
+                    <label class="block text-[10px] sm:text-xs uppercase tracking-widest font-semibold text-slate-400 mb-1">Contraseña</label>
+                    <input type="password" id="login-pass" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all" placeholder="Tu contraseña única" required>
+                </div>
+                <p id="login-error" class="text-rose-500 text-xs sm:text-sm hidden text-center font-medium mt-1">Usuario o contraseña incorrectos.</p>
+                <button type="submit" id="login-btn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 sm:py-4 rounded-xl text-sm sm:text-base font-medium transition-all shadow-md">
+                    Entrar a Jugar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- VISTA PRINCIPAL (Dashboard del Jugador Minimalista) -->
+    <div id="dashboard-view" class="hidden p-2 sm:p-4 md:p-6 transition-opacity duration-300 opacity-0 w-full max-w-[1400px] mx-auto flex-col h-[100dvh]">
+        
+        <!-- Contenedor Principal Dividido -->
+        <main class="flex-1 overflow-hidden flex flex-col gap-4 sm:gap-6 min-h-0">
+            
+            <!-- SECCIÓN 1: Selección de Cartones Detallados (Visible si hay créditos) -->
+            <div id="selection-section" class="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-3 sm:p-4 md:p-6 flex-1 overflow-hidden flex flex-col">
+                <div class="flex justify-between items-center mb-4 sm:mb-6 shrink-0 gap-2">
+                    <h2 class="text-base sm:text-lg md:text-xl font-serif text-slate-900">Selección de Cartones</h2>
+                    
+                    <!-- Indicador Elegante de Créditos -->
+                    <div class="flex items-center bg-indigo-50 border border-indigo-100 rounded-full pl-3 pr-1 py-1 shadow-sm shrink-0">
+                        <span class="text-[9px] sm:text-[10px] font-bold text-indigo-800 uppercase tracking-widest mr-2 hidden sm:inline">Créditos</span>
+                        <div class="bg-indigo-600 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shadow-inner transition-colors duration-300" id="stat-available-1">0</div>
+                    </div>
+                </div>
+
+                <!-- Scroll Area Grid de Cartones Completos -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 sm:pr-2 pb-4 sm:pb-8">
+                    <div id="tickets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                        <!-- Los 150 cartones se inyectan aquí -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECCIÓN 2: Mis Cartones (Visible solo al agotar créditos) -->
+            <div id="my-cards-section" class="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-4 sm:p-6 md:p-8 flex-1 overflow-hidden flex-col hidden min-h-0">
+                <div class="flex justify-between items-center mb-6 sm:mb-8 shrink-0 border-b border-slate-100 pb-4 sm:pb-5 gap-3">
+                    <h2 class="text-xl sm:text-2xl md:text-3xl font-serif text-slate-900 flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Tus Cartones Elegidos
+                    </h2>
+                    
+                    <!-- Indicador Elegante de Créditos (En 0) -->
+                    <div class="flex items-center bg-emerald-50 border border-emerald-100 rounded-full pl-3 pr-1 py-1 shadow-sm shrink-0">
+                        <span class="text-[9px] sm:text-[10px] font-bold text-emerald-800 uppercase tracking-widest mr-2 hidden sm:inline">Créditos</span>
+                        <div class="bg-emerald-500 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shadow-inner transition-colors duration-300" id="stat-available-2">0</div>
+                    </div>
+                </div>
+                
+                <div id="my-rendered-tickets" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 content-start pr-1 sm:pr-2 pb-4 sm:pb-8">
+                    <!-- Solo los cartones del jugador se inyectan aquí -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DE COMPRA -->
+    <div id="ticket-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-3 sm:p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 max-w-2xl w-full border border-slate-100 transform scale-95 transition-transform duration-300 flex flex-col items-center max-h-[90vh]" id="ticket-modal-content">
+            
+            <div class="w-full flex justify-between items-center mb-4 sm:mb-6 shrink-0">
+                <h3 class="text-lg sm:text-xl md:text-2xl font-serif text-slate-900" id="modal-title">Cartón #00</h3>
+                <button id="close-modal-btn" class="text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-200 rounded-full p-1.5 sm:p-2 transition-all">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="w-full overflow-y-auto custom-scrollbar flex flex-col items-center">
+                <div id="ticket-preview-container" class="w-full flex justify-center pb-2 sm:pb-4 shrink-0">
+                    <!-- Vista previa del cartón -->
+                </div>
+
+                <div id="purchase-controls" class="w-full mt-4 sm:mt-6 flex flex-col items-center hidden shrink-0">
+                    <button id="confirm-buy-btn" class="w-full max-w-xs bg-indigo-600 hover:bg-indigo-700 text-white py-3 sm:py-3.5 rounded-xl text-sm font-medium transition-all shadow-md flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                        Adquirir Cartón
+                    </button>
+                </div>
+
+                <div id="ownership-message" class="w-full mt-4 sm:mt-6 text-center hidden shrink-0">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-slate-100 text-slate-600 font-medium text-xs sm:text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <span id="ownership-text">Este cartón te pertenece. ¡Suerte!</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDocs, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGHW0-lJzniSDIY_iimlLel1HPmkUeCIQ",
+            authDomain: "loterix-b44ce.firebaseapp.com",
+            projectId: "loterix-b44ce",
+            storageBucket: "loterix-b44ce.firebasestorage.app",
+            messagingSenderId: "896669396240",
+            appId: "1:896669396240:web:b2f1ffb3a1678b30208995"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const accountsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'accounts');
+        const ticketsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'tickets');
+
+        let currentUser = null; 
+        let allTickets = {}; 
+        let selectedTicketId = null;
+
+        const colorThemes = {
+            green: { text: 'text-green-600', borderOuter: 'border-green-500', borderInner: 'border-green-400', emptyBg: 'bg-green-200/50' },
+            red: { text: 'text-rose-600', borderOuter: 'border-rose-600', borderInner: 'border-rose-500', emptyBg: 'bg-rose-200/50' },
+            blue: { text: 'text-blue-700', borderOuter: 'border-blue-600', borderInner: 'border-blue-500', emptyBg: 'bg-blue-200/50' },
+            yellow: { text: 'text-amber-600', borderOuter: 'border-amber-500', borderInner: 'border-amber-400', emptyBg: 'bg-amber-100/60' },
+            gray: { text: 'text-slate-400', borderOuter: 'border-slate-300', borderInner: 'border-slate-200', emptyBg: 'bg-slate-100/60' }
+        };
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loginView = document.getElementById('login-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        const ticketModal = document.getElementById('ticket-modal');
+        const ticketModalContent = document.getElementById('ticket-modal-content');
+
+        function mulberry32(a) {
+            return function() {
+              var t = a += 0x6D2B79F5;
+              t = Math.imul(t ^ t >>> 15, t | 1);
+              t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+              return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+
+        function generateTicketData(ticketId) {
+            const random = mulberry32(ticketId * 98765); 
+            const ticket = [Array(9).fill(null), Array(9).fill(null), Array(9).fill(null)];
+            for (let r = 0; r < 3; r++) {
+                let cols = [0,1,2,3,4,5,6,7,8];
+                for (let i = cols.length - 1; i > 0; i--) {
+                    const j = Math.floor(random() * (i + 1));
+                    [cols[i], cols[j]] = [cols[j], cols[i]];
+                }
+                let selectedCols = cols.slice(0, 5).sort((a,b)=>a-b);
+                selectedCols.forEach(c => {
+                    let min = c === 0 ? 1 : c * 10;
+                    let max = c === 8 ? 90 : (c * 10) + 9;
+                    let num;
+                    let attempts = 0;
+                    do { num = Math.floor(random() * (max - min + 1)) + min; attempts++; } 
+                    while ((ticket[0][c] === num || ticket[1][c] === num || ticket[2][c] === num) && attempts < 20);
+                    ticket[r][c] = num;
+                });
+            }
+            for (let c = 0; c < 9; c++) {
+                let colNums = [];
+                if (ticket[0][c]) colNums.push(ticket[0][c]);
+                if (ticket[1][c]) colNums.push(ticket[1][c]);
+                if (ticket[2][c]) colNums.push(ticket[2][c]);
+                colNums.sort((a,b) => a-b);
+                let idx = 0;
+                if (ticket[0][c] !== null) ticket[0][c] = colNums[idx++];
+                if (ticket[1][c] !== null) ticket[1][c] = colNums[idx++];
+                if (ticket[2][c] !== null) ticket[2][c] = colNums[idx++];
+            }
+            return ticket;
+        }
+
+        function getTicketColor(id) {
+            if (id <= 38) return 'red';
+            if (id <= 76) return 'yellow';
+            if (id <= 113) return 'green';
+            return 'blue';
+        }
+
+        function renderTicketHTML(ticketId, dataMatrix, colorKey, state, isModal) {
+            const theme = colorThemes[colorKey] || colorThemes.gray;
+            let overlay = '';
+            let cursor = 'cursor-pointer';
+            let opacity = 'opacity-100';
+
+            if (state === 'occupied') {
+                cursor = 'cursor-not-allowed';
+                opacity = 'opacity-50 grayscale';
+                overlay = `<div class="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/40 rounded-xl"><span class="bg-slate-700 text-white text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">Ocupado</span></div>`;
+            } else if (state === 'owned') {
+                overlay = `<div class="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 z-20"><span class="bg-indigo-600 text-white text-[9px] sm:text-[10px] font-bold px-2 py-0.5 sm:py-1 rounded-full shadow-md animate-bounce">Tuyo</span></div>`;
+            }
+
+            const textSize = isModal ? 'text-xs sm:text-base md:text-xl lg:text-2xl' : 'text-[10px] sm:text-xs md:text-sm xl:text-lg';
+            const modalConstraint = isModal ? 'max-w-md mx-auto' : '';
+
+            let html = `
+            <div class="relative w-full ${modalConstraint} ${cursor} ${opacity} transition-transform hover:scale-[1.02] bg-white rounded-xl shadow-sm p-1.5 sm:p-2 md:p-3 border border-slate-200 select-none">
+                ${overlay}
+                <div class="flex justify-between items-center mb-1 sm:mb-2 px-1">
+                    <span class="text-[7px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-widest">Loterix</span>
+                    <span class="text-[8px] sm:text-[10px] font-bold ${theme.text} uppercase tracking-widest">Cartón #${ticketId}</span>
+                </div>
+                <div class="bg-white border sm:border-2 ${theme.borderOuter} p-0.5 sm:p-1 w-full">
+                    <div class="border-t border-l ${theme.borderInner}">
+            `;
+            
+            for (let r = 0; r < 3; r++) {
+                html += `<div class="grid grid-cols-9">`;
+                for (let c = 0; c < 9; c++) {
+                    const val = dataMatrix[r][c];
+                    html += `<div class="aspect-square flex items-center justify-center border-r border-b ${theme.borderInner} ${val === null ? theme.emptyBg : 'bg-white font-bold ' + theme.text + ' ' + textSize}">${val || ''}</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</div></div></div>`;
+            return html;
+        }
+
+        function showToast(message, isError = false) {
+            let toast = document.getElementById('toast-notification');
+            if (!toast) { toast = document.createElement('div'); toast.id = 'toast-notification'; document.body.appendChild(toast); }
+            toast.className = `fixed bottom-4 sm:bottom-6 right-4 sm:right-6 px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-white text-xs sm:text-sm font-medium shadow-xl z-[9999] transition-all duration-300 opacity-100 translate-y-0 ${isError ? 'bg-rose-600' : 'bg-slate-800'}`;
+            toast.innerText = message;
+            setTimeout(() => { toast.classList.replace('opacity-100', 'opacity-0'); toast.classList.replace('translate-y-0', 'translate-y-4'); }, 3000);
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userInput = document.getElementById('login-user').value.trim();
+            const passInput = document.getElementById('login-pass').value.trim();
+            const btn = document.getElementById('login-btn');
+            const errorMsg = document.getElementById('login-error');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-pulse">Verificando...</span>';
+            errorMsg.classList.add('hidden');
+            try {
+                const querySnapshot = await getDocs(accountsCollectionRef);
+                let foundAccount = null;
+                querySnapshot.forEach((docSnap) => {
+                    const acc = docSnap.data();
+                    if (acc.username.toLowerCase() === userInput.toLowerCase() && acc.password === passInput) { foundAccount = { id: docSnap.id, ...acc }; }
+                });
+                if (foundAccount) {
+                    sessionStorage.setItem('loterix_player_id', foundAccount.id);
+                    currentUser = foundAccount;
+                    loginView.classList.add('opacity-0');
+                    setTimeout(async () => {
+                        loginView.classList.add('hidden');
+                        loadingOverlay.classList.remove('hidden');
+                        setTimeout(() => loadingOverlay.classList.remove('opacity-0'), 10);
+                        await startDashboard();
+                        loadingOverlay.classList.add('opacity-0');
+                        setTimeout(() => { loadingOverlay.classList.add('hidden'); dashboardView.classList.remove('hidden'); dashboardView.classList.add('flex'); setTimeout(() => dashboardView.classList.remove('opacity-0'), 10); }, 500);
+                    }, 300);
+                } else {
+                    errorMsg.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerText = 'Entrar a Jugar';
+                }
+            } catch (err) {
+                console.error(err);
+                showToast("Error de conexión.", true);
+                btn.disabled = false;
+                btn.innerText = 'Entrar a Jugar';
+            }
+        });
+
+        async function initApp() {
+            try {
+                await signInAnonymously(auth);
+                const savedId = sessionStorage.getItem('loterix_player_id');
+                if (savedId) {
+                    const querySnapshot = await getDocs(accountsCollectionRef);
+                    let foundAccount = null;
+                    querySnapshot.forEach((docSnap) => { if (docSnap.id === savedId) foundAccount = { id: docSnap.id, ...docSnap.data() }; });
+                    if (foundAccount) {
+                        currentUser = foundAccount;
+                        await startDashboard();
+                        loadingOverlay.classList.add('opacity-0');
+                        setTimeout(() => { loadingOverlay.classList.add('hidden'); dashboardView.classList.remove('hidden'); dashboardView.classList.add('flex'); setTimeout(() => dashboardView.classList.remove('opacity-0'), 10); }, 500);
+                    } else { sessionStorage.removeItem('loterix_player_id'); showLogin(); }
+                } else showLogin();
+            } catch (error) { console.error("Error:", error); showToast("No se pudo conectar.", true); }
+        }
+
+        function showLogin() {
+            loadingOverlay.classList.add('opacity-0');
+            setTimeout(() => { loadingOverlay.classList.add('hidden'); loginView.classList.remove('hidden'); setTimeout(() => loginView.classList.remove('opacity-0'), 10); }, 500);
+        }
+
+        async function startDashboard() {
+            onSnapshot(doc(db, 'artifacts', 'loterix', 'public', 'data', 'accounts', currentUser.id), (docSnap) => {
+                if (docSnap.exists()) {
+                    currentUser.credits = docSnap.data().credits || 0;
+                    updateStats();
+                } else {
+                    sessionStorage.removeItem('loterix_player_id');
+                    window.location.reload();
+                }
+            });
+
+            onSnapshot(ticketsCollectionRef, (snapshot) => {
+                allTickets = {};
+                snapshot.forEach(docSnap => {
+                    allTickets[docSnap.id] = docSnap.data();
+                });
+                updateStats();
+                renderGrid();
+            });
+        }
+
+        function updateStats() {
+            let myTicketsCount = 0;
+            for (let i = 1; i <= 150; i++) {
+                if (allTickets[i.toString()] && allTickets[i.toString()].ownerId === currentUser.id) myTicketsCount++;
+            }
+            const total = currentUser.credits;
+            const available = total - myTicketsCount;
+            
+            const availEl1 = document.getElementById('stat-available-1');
+            if (availEl1) availEl1.innerText = available;
+
+            const availEl2 = document.getElementById('stat-available-2');
+            if (availEl2) availEl2.innerText = available;
+        }
+
+        function renderGrid() {
+            const selectionSection = document.getElementById('selection-section');
+            const myCardsSection = document.getElementById('my-cards-section');
+            const grid = document.getElementById('tickets-grid');
+            const myTicketsContainer = document.getElementById('my-rendered-tickets');
+
+            if (!grid || !myTicketsContainer) return;
+
+            grid.innerHTML = '';
+            myTicketsContainer.innerHTML = '';
+            
+            let myTicketsCount = 0;
+            let myTicketsHtml = '';
+
+            for (let i = 1; i <= 150; i++) {
+                const idStr = i.toString();
+                const ticketInfo = allTickets[idStr];
+                const matrix = generateTicketData(i);
+                const baseColor = getTicketColor(i);
+                let state = 'free';
+                
+                if (ticketInfo) {
+                    if (ticketInfo.ownerId === currentUser.id) {
+                        state = 'owned';
+                        myTicketsCount++;
+                        myTicketsHtml += renderTicketHTML(i, matrix, baseColor, 'owned', false);
+                    } else {
+                        state = 'occupied';
+                    }
+                }
+                
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = renderTicketHTML(i, matrix, (state === 'occupied' ? 'gray' : baseColor), state, false);
+                const card = tempDiv.firstElementChild;
+                
+                card.onclick = () => {
+                    if (state === 'occupied') showToast("Este cartón ya está ocupado por otro jugador.", true);
+                    else openTicketModal(i, state);
+                };
+                
+                grid.appendChild(card);
+            }
+
+            myTicketsContainer.innerHTML = myTicketsHtml;
+
+            if (currentUser.credits > 0 && myTicketsCount >= currentUser.credits) {
+                selectionSection.classList.add('hidden');
+                selectionSection.classList.remove('flex');
+                myCardsSection.classList.remove('hidden');
+                myCardsSection.classList.add('flex');
+            } else {
+                selectionSection.classList.remove('hidden');
+                selectionSection.classList.add('flex');
+                myCardsSection.classList.add('hidden');
+                myCardsSection.classList.remove('flex');
+            }
+        }
+
+        function openTicketModal(ticketId, state) {
+            selectedTicketId = ticketId;
+            document.getElementById('modal-title').innerText = `Revisando Cartón #${ticketId}`;
+            const container = document.getElementById('ticket-preview-container');
+            const color = getTicketColor(ticketId);
+            container.innerHTML = renderTicketHTML(ticketId, generateTicketData(ticketId), color, state, true);
+            const purchaseControls = document.getElementById('purchase-controls');
+            const ownershipMsg = document.getElementById('ownership-message');
+            if (state === 'free') { purchaseControls.classList.remove('hidden'); ownershipMsg.classList.add('hidden'); }
+            else { purchaseControls.classList.add('hidden'); ownershipMsg.classList.remove('hidden'); }
+            ticketModal.classList.remove('hidden');
+            setTimeout(() => { ticketModal.classList.remove('opacity-0'); ticketModalContent.classList.replace('scale-95', 'scale-100'); }, 10);
+        }
+
+        function closeTicketModal() {
+            ticketModal.classList.add('opacity-0');
+            ticketModalContent.classList.replace('scale-100', 'scale-95');
+            setTimeout(() => { ticketModal.classList.add('hidden'); }, 300);
+            selectedTicketId = null;
+        }
+
+        document.getElementById('close-modal-btn').onclick = closeTicketModal;
+        document.getElementById('confirm-buy-btn').onclick = async () => {
+            if (!selectedTicketId) return;
+            
+            let myTicketsCount = 0;
+            for (let i = 1; i <= 150; i++) { 
+                if (allTickets[i.toString()] && allTickets[i.toString()].ownerId === currentUser.id) myTicketsCount++; 
+            }
+            
+            if (myTicketsCount >= currentUser.credits) { 
+                showToast("Ya no tienes más créditos disponibles.", true); 
+                closeTicketModal();
+                return; 
+            }
+            
+            if (allTickets[selectedTicketId.toString()]) { 
+                showToast("¡Lo sentimos! Otro jugador se adelantó y compró este cartón.", true); 
+                closeTicketModal();
+                return; 
+            }
+            
+            const btn = document.getElementById('confirm-buy-btn');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="animate-pulse">Confirmando...</span>';
+            btn.disabled = true;
+
+            try {
+                await setDoc(doc(ticketsCollectionRef, selectedTicketId.toString()), { 
+                    ownerId: currentUser.id, 
+                    ownerName: currentUser.username, 
+                    color: getTicketColor(selectedTicketId), 
+                    timestamp: Date.now() 
+                });
+                
+                showToast("¡Cartón adquirido con éxito!"); 
+                closeTicketModal();
+            } catch (err) { 
+                console.error(err); 
+                showToast("Error al guardar el cartón.", true); 
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        };
+        initApp();
+    </script>
+</body>
+</html>
