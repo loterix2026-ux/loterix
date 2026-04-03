@@ -130,6 +130,12 @@
                 <!-- Tarjeta de la Bola Actual -->
                 <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-6 sm:p-8 flex flex-col items-center justify-center relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-300 via-amber-500 to-amber-300"></div>
+                    
+                    <!-- Banner de Alerta (Todos Listos) -->
+                    <div id="ready-banner" class="hidden w-full bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl p-3 mb-4 text-center font-bold text-xs sm:text-sm animate-pulse shadow-sm">
+                        ✨ ¡Todos listos! Inicia el sorteo.
+                    </div>
+
                     <h2 class="text-xs sm:text-sm text-slate-400 uppercase tracking-widest font-semibold mb-6">Número Actual</h2>
                     
                     <div id="ball-wrapper" class="w-40 h-40 sm:w-48 sm:h-48 rounded-full flex items-center justify-center shadow-inner relative transition-transform duration-300 scale-100">
@@ -429,6 +435,8 @@
         let lastCheckedCalledCount = 0; 
         
         let playingTickets = {}; 
+        let adminTotalCredits = 0;
+        let adminHasBeenNotifiedOfReady = false;
 
         let autoStartTime = 0;
         let autoIntervalMsData = 3000; 
@@ -827,11 +835,21 @@
             initDeck();
             initGrid();
 
+            // Escuchar cuentas para saber cuántos créditos totales hay
+            onSnapshot(collection(db, 'artifacts', 'loterix', 'public', 'data', 'accounts'), (snapshot) => {
+                adminTotalCredits = 0;
+                snapshot.forEach(docSnap => {
+                    adminTotalCredits += (docSnap.data().credits || 0);
+                });
+                updateUI(); 
+            });
+
             onSnapshot(ticketsCollectionRef, (snapshot) => {
                 playingTickets = {};
                 snapshot.forEach(docSnap => {
                     playingTickets[docSnap.id] = docSnap.data();
                 });
+                updateUI();
             });
 
             const docSnap = await getDoc(gameDocRef);
@@ -1018,6 +1036,30 @@
             const activeCalled = derived ? derived.calledNumbers : calledNumbers;
             const activeCurrent = derived ? derived.currentNumber : currentNumber;
             const activeMixing = derived ? derived.isMixing : isDrawing;
+
+            // --- Lógica Notificación de Listos ---
+            const readyBanner = document.getElementById('ready-banner');
+            if (readyBanner && sessionStorage.getItem('loterix_admin_auth') === 'true') {
+                const usedCredits = Object.keys(playingTickets).length;
+                const availableCredits = adminTotalCredits - usedCredits;
+
+                // Si hay créditos asignados, ya se usaron todos y el juego está en la bola 0
+                if (adminTotalCredits > 0 && availableCredits <= 0 && activeCalled.length === 0) {
+                    readyBanner.classList.remove('hidden');
+                    readyBanner.classList.add('block');
+                    if (!adminHasBeenNotifiedOfReady) {
+                        showToast("✨ ¡Todos los jugadores están listos! Puedes iniciar el sorteo.");
+                        adminHasBeenNotifiedOfReady = true;
+                    }
+                } else {
+                    readyBanner.classList.add('hidden');
+                    readyBanner.classList.remove('block');
+                    if (availableCredits > 0 || activeCalled.length > 0) {
+                        adminHasBeenNotifiedOfReady = false;
+                    }
+                }
+            }
+            // -------------------------------------
 
             const currentBallText = document.getElementById('current-ball-text');
             const trophyIcon = document.getElementById('trophy-icon');
