@@ -136,6 +136,21 @@
                         </button>
                     </div>
 
+                    <!-- Controles de Reproducción -->
+                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <span class="text-xs font-semibold uppercase text-slate-500">Reproductor:</span>
+                        <div class="flex gap-2">
+                            <button id="yt-play-btn" type="button" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 py-1.5 px-3 rounded-md transition-all flex items-center gap-1.5" title="Reproducir">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span class="text-xs font-bold uppercase">Play</span>
+                            </button>
+                            <button id="yt-pause-btn" type="button" class="bg-amber-100 hover:bg-amber-200 text-amber-700 py-1.5 px-3 rounded-md transition-all flex items-center gap-1.5" title="Pausar">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                                <span class="text-xs font-bold uppercase">Pausa</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <button id="open-settings-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                         Ajustes de Pantalla y Música
@@ -291,17 +306,7 @@
                 </div>
 
                 <div class="border-t border-slate-200 pt-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <label class="text-xs text-slate-700 font-bold uppercase tracking-wider">Playlist de YouTube</label>
-                        <div class="flex gap-1.5">
-                            <button id="yt-play-btn" type="button" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 p-1.5 rounded-md transition-all" title="Reproducir">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                            </button>
-                            <button id="yt-pause-btn" type="button" class="bg-amber-100 hover:bg-amber-200 text-amber-700 p-1.5 rounded-md transition-all" title="Pausar">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                            </button>
-                        </div>
-                    </div>
+                    <label class="text-xs text-slate-700 font-bold uppercase tracking-wider block mb-3">Playlist de YouTube</label>
                     
                     <div class="flex gap-2 mb-3">
                         <input type="text" id="new-track-input" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30" placeholder="Añadir enlace de YouTube...">
@@ -1053,7 +1058,7 @@
                 syncStateToFirebase();
             });
 
-            // Botones de Reproducir / Pausar Música Globales (dentro del modal)
+            // Botones de Reproducir / Pausar Música Globales
             document.getElementById('yt-play-btn').addEventListener('click', async () => {
                 mediaCommandData = 'play';
                 mediaCommandIdData = Date.now();
