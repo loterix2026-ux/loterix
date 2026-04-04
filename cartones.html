@@ -182,11 +182,11 @@
 
         const accountsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'accounts');
         const ticketsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'tickets');
+        const gameDocRef = doc(db, 'artifacts', 'loterix', 'public', 'data', 'games', 'current');
 
         let currentUser = null; 
         let allTickets = {}; 
         let drawnNumbers = new Set();
-        let globalDrawnMemory = {};
         let selectedTicketId = null;
         let activeAccountIds = new Set();
         let accountsLoaded = false;
@@ -402,50 +402,6 @@
             }
         }
 
-        function extractBingoNumbers(dataObj, docId) {
-            let foundNumbers = [];
-            const idNum = parseInt(docId, 10);
-            if (!isNaN(idNum) && idNum > 0 && idNum <= 90) foundNumbers.push(idNum);
-
-            function scanRecursively(obj) {
-                if (!obj) return;
-                Object.values(obj).forEach(val => {
-                    if (Array.isArray(val)) {
-                        val.forEach(v => {
-                            const n = parseInt(v, 10);
-                            if (!isNaN(n) && n > 0 && n <= 90) foundNumbers.push(n);
-                        });
-                    } else if (typeof val === 'number') {
-                        if (val > 0 && val <= 90) foundNumbers.push(val);
-                    } else if (typeof val === 'string') {
-                        const n = parseInt(val, 10);
-                        if (!isNaN(n) && n > 0 && n <= 90) foundNumbers.push(n);
-                    } else if (typeof val === 'object') {
-                        scanRecursively(val);
-                    }
-                });
-            }
-            scanRecursively(dataObj);
-            return foundNumbers;
-        }
-
-        function updateGlobalDrawn() {
-            drawnNumbers.clear();
-            Object.values(globalDrawnMemory).forEach(set => {
-                set.forEach(num => drawnNumbers.add(num));
-            });
-
-            const statusText = document.getElementById('drawn-count-text');
-            if (statusText) {
-                if (drawnNumbers.size > 0) {
-                    statusText.innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números cantados recibidos.`;
-                } else {
-                    statusText.innerText = "Escuchando base de datos. Ningún número detectado aún...";
-                }
-            }
-            if (accountsLoaded && ticketsLoaded) renderGrid();
-        }
-
         async function startDashboard() {
             onSnapshot(accountsCollectionRef, (snapshot) => {
                 activeAccountIds.clear();
@@ -475,46 +431,30 @@
                 checkAndRender();
             });
 
-            // SÚPER ESCÁNER TOTAL: Busca en las rutas "artifacts" y también en la RAÍZ de la base de datos
-            const collectionsToCheck = [
-                collection(db, 'artifacts', 'loterix', 'public', 'data', 'drawn_numbers'),
-                collection(db, 'artifacts', 'loterix', 'public', 'data', 'numbers'),
-                collection(db, 'artifacts', 'loterix', 'public', 'data', 'sorteo'),
-                collection(db, 'drawn_numbers'), // En la raíz
-                collection(db, 'sorteo'), // En la raíz
-                collection(db, 'numeros_sorteados') // En la raíz
-            ];
+            // ESCUCHADOR DIRECTO Y EXACTO AL ADMINISTRADOR
+            onSnapshot(gameDocRef, (docSnap) => {
+                drawnNumbers.clear();
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // El administrador guarda los números en un arreglo llamado 'calledNumbers'
+                    if (data.calledNumbers && Array.isArray(data.calledNumbers)) {
+                        data.calledNumbers.forEach(num => drawnNumbers.add(num));
+                    }
+                }
 
-            collectionsToCheck.forEach((colRef, index) => {
-                globalDrawnMemory[index] = new Set();
-                try {
-                    onSnapshot(colRef, (snapshot) => {
-                        globalDrawnMemory[index].clear();
-                        snapshot.forEach(docSnap => {
-                            extractBingoNumbers(docSnap.data(), docSnap.id).forEach(num => globalDrawnMemory[index].add(num));
-                        });
-                        updateGlobalDrawn();
-                    }, (err) => { /* Ignorar si no tenemos permiso para leer algunas de estas carpetas */ });
-                } catch(e) {}
-            });
-            
-            // También escaneamos documentos sueltos que puedan contener la lista de números
-            const docsToCheck = [
-                doc(db, 'artifacts', 'loterix', 'public', 'data', 'gameState', 'current'),
-                doc(db, 'gameState', 'current')
-            ];
-            docsToCheck.forEach((docRef, index) => {
-                const key = 'doc_' + index;
-                globalDrawnMemory[key] = new Set();
-                try {
-                    onSnapshot(docRef, (docSnap) => {
-                        globalDrawnMemory[key].clear();
-                        if(docSnap.exists()) {
-                            extractBingoNumbers(docSnap.data(), docSnap.id).forEach(num => globalDrawnMemory[key].add(num));
-                        }
-                        updateGlobalDrawn();
-                    }, (err) => {});
-                } catch(e) {}
+                // Actualizar el texto debajo del título
+                const statusText = document.getElementById('drawn-count-text');
+                if (statusText) {
+                    if (drawnNumbers.size > 0) {
+                        statusText.innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números cantados recibidos.`;
+                    } else {
+                        statusText.innerText = "Esperando a que inicie el sorteo...";
+                    }
+                }
+
+                // Refrescar los cartones visualmente
+                if (accountsLoaded && ticketsLoaded) renderGrid();
             });
         }
 
