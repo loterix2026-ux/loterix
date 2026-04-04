@@ -201,6 +201,7 @@
         let currentFirebaseState = null;
         let playerRenderInterval = null;
         let lastDrawnSize = -1;
+        let latestDrawnNumber = null;
 
         const colorThemes = {
             green: { text: 'text-green-600', borderOuter: 'border-green-500', borderInner: 'border-green-400', emptyBg: 'bg-green-200/50', markBg: 'bg-green-500', markText: 'text-white' },
@@ -309,10 +310,11 @@
                     
                     if (val !== null) {
                         if (drawnNumbers.has(val)) {
-                            // MARCA VISUAL DEFINITIVA A PRUEBA DE FALLOS
+                            // Aplicar animación SOLO al último número cantado para evitar parpadeos
+                            const animClass = (val === latestDrawnNumber) ? 'marked-number' : '';
                             cellHTML = `
                             <div class="w-full h-full p-[2px] sm:p-1">
-                                <div class="w-full h-full rounded-full ${theme.markBg} flex items-center justify-center shadow-[inset_0_0_8px_rgba(0,0,0,0.2)] marked-number border border-white/90">
+                                <div class="w-full h-full rounded-full ${theme.markBg} flex items-center justify-center shadow-[inset_0_0_8px_rgba(0,0,0,0.2)] ${animClass} border border-white/90">
                                     <span class="${theme.markText} font-black drop-shadow-sm">${val}</span>
                                 </div>
                             </div>`;
@@ -442,8 +444,14 @@
         function processDerivedState(data) {
             if (!data) return;
             drawnNumbers.clear();
+            latestDrawnNumber = null;
             
             if (data.calledNumbers && Array.isArray(data.calledNumbers)) {
+                // El número más reciente siempre está en la posición [0] del arreglo
+                if (data.calledNumbers.length > 0) {
+                    latestDrawnNumber = parseInt(data.calledNumbers[0], 10);
+                }
+
                 data.calledNumbers.forEach(num => {
                     const parsed = parseInt(num, 10);
                     if(!isNaN(parsed)) drawnNumbers.add(parsed);
@@ -589,6 +597,7 @@
 
             if (numeroPrueba) {
                 drawnNumbers.add(numeroPrueba);
+                latestDrawnNumber = numeroPrueba; // Le indicamos a la animación que este es el nuevo
                 document.getElementById('drawn-count-text').innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números detectados (Modo Prueba).`;
                 renderGrid();
                 showToast(`¡Número ${numeroPrueba} marcado en modo prueba!`);
