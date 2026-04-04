@@ -33,7 +33,7 @@
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
+            0% { transform: scale(0.3); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
     </style>
@@ -313,23 +313,23 @@
                     const val = dataMatrix[r][c];
                     
                     // Lógica para marcar el número si ha sido sorteado
-                    let cellClass = `${theme.emptyBg}`;
-                    let cellContent = '';
+                    let cellHTML = '';
                     
                     if (val !== null) {
                         if (drawnNumbers.has(val)) {
-                            // El número ha sido sorteado: lo marcamos
-                            cellClass = `${theme.markBg} ${theme.markText} font-bold marked-number rounded-full m-[1px] shadow-sm`;
-                            cellContent = val;
+                            // El número ha sido sorteado: lo marcamos como un círculo adentro de la celda
+                            cellHTML = `<div class="w-[85%] h-[85%] flex items-center justify-center ${theme.markBg} ${theme.markText} font-bold marked-number rounded-full shadow-sm">${val}</div>`;
                         } else {
                             // El número NO ha sido sorteado: estilo normal
-                            cellClass = `bg-white font-bold ${theme.text}`;
-                            cellContent = val;
+                            cellHTML = `<div class="w-full h-full flex items-center justify-center bg-white font-bold ${theme.text}">${val}</div>`;
                         }
+                    } else {
+                        // Celda vacía
+                        cellHTML = `<div class="w-full h-full ${theme.emptyBg}"></div>`;
                     }
 
                     html += `<div class="aspect-square flex items-center justify-center border-r border-b ${theme.borderInner} ${textSize}">
-                                <div class="w-full h-full flex items-center justify-center ${cellClass}">${cellContent}</div>
+                                ${cellHTML}
                              </div>`;
                 }
                 html += `</div>`;
@@ -452,15 +452,28 @@
                 checkAndRender();
             });
 
-            // Escuchamos los números sorteados (NOVEDAD)
+            // Escuchamos los números sorteados (NOVEDAD CONVERSIÓN A ENTEROS)
             onSnapshot(numbersCollectionRef, (snapshot) => {
                 drawnNumbers.clear();
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    if (data.number) {
-                        drawnNumbers.add(data.number);
+                    
+                    // Verificamos si el admin guarda el número como un campo "number"
+                    // O si usa el ID del documento en firebase para el número (ej. doc ID "15")
+                    let numeroExtraido = data.number;
+                    if (numeroExtraido === undefined || numeroExtraido === null) {
+                        numeroExtraido = docSnap.id;
+                    }
+
+                    // Convertimos siempre de texto a número entero matemáticamente
+                    const numeroEntero = parseInt(numeroExtraido, 10);
+                    
+                    // Si es un número válido, lo agregamos al conjunto
+                    if (!isNaN(numeroEntero)) {
+                        drawnNumbers.add(numeroEntero);
                     }
                 });
+
                 // Re-renderizamos para actualizar los números marcados en los cartones
                 if (accountsLoaded && ticketsLoaded) {
                     renderGrid();
