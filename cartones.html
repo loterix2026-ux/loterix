@@ -186,6 +186,9 @@
         let currentUser = null; 
         let allTickets = {}; 
         let selectedTicketId = null;
+        let activeAccountIds = new Set();
+        let accountsLoaded = false;
+        let ticketsLoaded = false;
 
         const colorThemes = {
             green: { text: 'text-green-600', borderOuter: 'border-green-500', borderInner: 'border-green-400', emptyBg: 'bg-green-200/50' },
@@ -374,32 +377,39 @@
             setTimeout(() => { loadingOverlay.classList.add('hidden'); loginView.classList.remove('hidden'); setTimeout(() => loginView.classList.remove('opacity-0'), 10); }, 500);
         }
 
+        function checkAndRender() {
+            // Solo renderizamos si ambas colecciones (cuentas y cartones) ya cargaron
+            // Esto evita borrar cartones por error antes de tener la lista de cuentas
+            if (accountsLoaded && ticketsLoaded) {
+                updateStats();
+                renderGrid();
+            }
+        }
+
         async function startDashboard() {
-            onSnapshot(doc(db, 'artifacts', 'loterix', 'public', 'data', 'accounts', currentUser.id), async (docSnap) => {
-                if (docSnap.exists()) {
-                    currentUser.credits = docSnap.data().credits || 0;
-                    updateStats();
-                } else {
-                    // LA CUENTA FUE ELIMINADA DE LA BASE DE DATOS.
-                    // 1. Buscamos y borramos todos los cartones que pertenecían a este jugador para liberarlos.
-                    try {
-                        const ticketsSnap = await getDocs(ticketsCollectionRef);
-                        const deletePromises = [];
-                        ticketsSnap.forEach(tDoc => {
-                            if (tDoc.data().ownerId === currentUser.id) {
-                                deletePromises.push(deleteDoc(doc(db, 'artifacts', 'loterix', 'public', 'data', 'tickets', tDoc.id)));
-                            }
-                        });
-                        // Esperamos a que todos se eliminen
-                        await Promise.all(deletePromises);
-                    } catch (e) {
-                        console.error("Error al liberar los cartones:", e);
+            // Escuchamos TODAS las cuentas para saber quiénes están activos
+            onSnapshot(accountsCollectionRef, (snapshot) => {
+                activeAccountIds.clear();
+                let myAccountFound = false;
+                
+                snapshot.forEach(docSnap => {
+                    activeAccountIds.add(docSnap.id);
+                    // Verificamos si nuestra cuenta sigue existiendo
+                    if (docSnap.id === currentUser.id) {
+                        myAccountFound = true;
+                        currentUser.credits = docSnap.data().credits || 0;
                     }
-                    
-                    // 2. Cerramos la sesión del usuario eliminado.
+                });
+
+                if (!myAccountFound) {
+                    // Mi cuenta fue eliminada. Cerrar sesión.
                     sessionStorage.removeItem('loterix_player_id');
                     window.location.reload();
+                    return;
                 }
+
+                accountsLoaded = true;
+                checkAndRender();
             });
 
             onSnapshot(ticketsCollectionRef, (snapshot) => {
@@ -407,8 +417,8 @@
                 snapshot.forEach(docSnap => {
                     allTickets[docSnap.id] = docSnap.data();
                 });
-                updateStats();
-                renderGrid();
+                ticketsLoaded = true;
+                checkAndRender();
             });
         }
 
@@ -453,8 +463,14 @@
                         state = 'owned';
                         myTicketsCount++;
                         myTicketsHtml += renderTicketHTML(i, matrix, baseColor, 'owned', false);
-                    } else {
+                    } else if (activeAccountIds.has(ticketInfo.ownerId)) {
+                        // El dueño sigue siendo una cuenta activa
                         state = 'occupied';
+                    } else {
+                        // El dueño ya NO existe en la colección de cuentas (cuenta eliminada)
+                        state = 'free';
+                        // Limpiamos este cartón huerfano de la base de datos silenciosamente
+                        deleteDoc(doc(db, 'artifacts', 'loterix', 'public', 'data', 'tickets', idStr)).catch(e => console.error("Error limpiando cartón:", e));
                     }
                 }
                 
