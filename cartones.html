@@ -27,6 +27,15 @@
             background: rgba(148, 163, 184, 0.4); 
             border-radius: 4px;
         }
+        
+        /* Animación para números marcados */
+        .marked-number {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-[#FDFBF7] text-slate-800 selection:bg-indigo-200 flex flex-col">
@@ -100,10 +109,13 @@
             <!-- SECCIÓN 2: Mis Cartones (Visible solo al agotar créditos) -->
             <div id="my-cards-section" class="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-4 sm:p-6 md:p-8 flex-1 overflow-hidden flex-col hidden min-h-0">
                 <div class="flex justify-between items-center mb-6 sm:mb-8 shrink-0 border-b border-slate-100 pb-4 sm:pb-5 gap-3">
-                    <h2 class="text-xl sm:text-2xl md:text-3xl font-serif text-slate-900 flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        Tus Cartones Elegidos
-                    </h2>
+                    <div class="flex flex-col">
+                        <h2 class="text-xl sm:text-2xl md:text-3xl font-serif text-slate-900 flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Tus Cartones
+                        </h2>
+                        <span class="text-xs text-slate-500 mt-1">Los números cantados se marcarán automáticamente</span>
+                    </div>
                     
                     <div class="flex items-center gap-2 sm:gap-4">
                         <!-- Indicador Elegante de Créditos (En 0) -->
@@ -182,20 +194,22 @@
 
         const accountsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'accounts');
         const ticketsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'tickets');
+        const numbersCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'drawn_numbers');
 
         let currentUser = null; 
         let allTickets = {}; 
+        let drawnNumbers = new Set(); // Conjunto para guardar los números sorteados
         let selectedTicketId = null;
         let activeAccountIds = new Set();
         let accountsLoaded = false;
         let ticketsLoaded = false;
 
         const colorThemes = {
-            green: { text: 'text-green-600', borderOuter: 'border-green-500', borderInner: 'border-green-400', emptyBg: 'bg-green-200/50' },
-            red: { text: 'text-rose-600', borderOuter: 'border-rose-600', borderInner: 'border-rose-500', emptyBg: 'bg-rose-200/50' },
-            blue: { text: 'text-blue-700', borderOuter: 'border-blue-600', borderInner: 'border-blue-500', emptyBg: 'bg-blue-200/50' },
-            yellow: { text: 'text-amber-600', borderOuter: 'border-amber-500', borderInner: 'border-amber-400', emptyBg: 'bg-amber-100/60' },
-            gray: { text: 'text-slate-400', borderOuter: 'border-slate-300', borderInner: 'border-slate-200', emptyBg: 'bg-slate-100/60' }
+            green: { text: 'text-green-600', borderOuter: 'border-green-500', borderInner: 'border-green-400', emptyBg: 'bg-green-200/50', markBg: 'bg-green-500', markText: 'text-white' },
+            red: { text: 'text-rose-600', borderOuter: 'border-rose-600', borderInner: 'border-rose-500', emptyBg: 'bg-rose-200/50', markBg: 'bg-rose-500', markText: 'text-white' },
+            blue: { text: 'text-blue-700', borderOuter: 'border-blue-600', borderInner: 'border-blue-500', emptyBg: 'bg-blue-200/50', markBg: 'bg-blue-600', markText: 'text-white' },
+            yellow: { text: 'text-amber-600', borderOuter: 'border-amber-500', borderInner: 'border-amber-400', emptyBg: 'bg-amber-100/60', markBg: 'bg-amber-500', markText: 'text-white' },
+            gray: { text: 'text-slate-400', borderOuter: 'border-slate-300', borderInner: 'border-slate-200', emptyBg: 'bg-slate-100/60', markBg: 'bg-slate-500', markText: 'text-white' }
         };
 
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -297,7 +311,26 @@
                 html += `<div class="grid grid-cols-9">`;
                 for (let c = 0; c < 9; c++) {
                     const val = dataMatrix[r][c];
-                    html += `<div class="aspect-square flex items-center justify-center border-r border-b ${theme.borderInner} ${val === null ? theme.emptyBg : 'bg-white font-bold ' + theme.text + ' ' + textSize}">${val || ''}</div>`;
+                    
+                    // Lógica para marcar el número si ha sido sorteado
+                    let cellClass = `${theme.emptyBg}`;
+                    let cellContent = '';
+                    
+                    if (val !== null) {
+                        if (drawnNumbers.has(val)) {
+                            // El número ha sido sorteado: lo marcamos
+                            cellClass = `${theme.markBg} ${theme.markText} font-bold marked-number rounded-full m-[1px] shadow-sm`;
+                            cellContent = val;
+                        } else {
+                            // El número NO ha sido sorteado: estilo normal
+                            cellClass = `bg-white font-bold ${theme.text}`;
+                            cellContent = val;
+                        }
+                    }
+
+                    html += `<div class="aspect-square flex items-center justify-center border-r border-b ${theme.borderInner} ${textSize}">
+                                <div class="w-full h-full flex items-center justify-center ${cellClass}">${cellContent}</div>
+                             </div>`;
                 }
                 html += `</div>`;
             }
@@ -379,7 +412,6 @@
 
         function checkAndRender() {
             // Solo renderizamos si ambas colecciones (cuentas y cartones) ya cargaron
-            // Esto evita borrar cartones por error antes de tener la lista de cuentas
             if (accountsLoaded && ticketsLoaded) {
                 updateStats();
                 renderGrid();
@@ -394,7 +426,6 @@
                 
                 snapshot.forEach(docSnap => {
                     activeAccountIds.add(docSnap.id);
-                    // Verificamos si nuestra cuenta sigue existiendo
                     if (docSnap.id === currentUser.id) {
                         myAccountFound = true;
                         currentUser.credits = docSnap.data().credits || 0;
@@ -402,7 +433,6 @@
                 });
 
                 if (!myAccountFound) {
-                    // Mi cuenta fue eliminada. Cerrar sesión.
                     sessionStorage.removeItem('loterix_player_id');
                     window.location.reload();
                     return;
@@ -412,6 +442,7 @@
                 checkAndRender();
             });
 
+            // Escuchamos los cartones
             onSnapshot(ticketsCollectionRef, (snapshot) => {
                 allTickets = {};
                 snapshot.forEach(docSnap => {
@@ -419,6 +450,21 @@
                 });
                 ticketsLoaded = true;
                 checkAndRender();
+            });
+
+            // Escuchamos los números sorteados (NOVEDAD)
+            onSnapshot(numbersCollectionRef, (snapshot) => {
+                drawnNumbers.clear();
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.number) {
+                        drawnNumbers.add(data.number);
+                    }
+                });
+                // Re-renderizamos para actualizar los números marcados en los cartones
+                if (accountsLoaded && ticketsLoaded) {
+                    renderGrid();
+                }
             });
         }
 
@@ -464,12 +510,9 @@
                         myTicketsCount++;
                         myTicketsHtml += renderTicketHTML(i, matrix, baseColor, 'owned', false);
                     } else if (activeAccountIds.has(ticketInfo.ownerId)) {
-                        // El dueño sigue siendo una cuenta activa
                         state = 'occupied';
                     } else {
-                        // El dueño ya NO existe en la colección de cuentas (cuenta eliminada)
                         state = 'free';
-                        // Limpiamos este cartón huerfano de la base de datos silenciosamente
                         deleteDoc(doc(db, 'artifacts', 'loterix', 'public', 'data', 'tickets', idStr)).catch(e => console.error("Error limpiando cartón:", e));
                     }
                 }
