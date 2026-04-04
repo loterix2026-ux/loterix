@@ -117,7 +117,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                             Tus Cartones
                         </h2>
-                        <span class="text-xs text-slate-500 mt-1">Los números cantados se marcarán automáticamente</span>
+                        <span class="text-xs text-slate-500 mt-1" id="drawn-count-text">Esperando a que inicie el sorteo...</span>
                     </div>
                     
                     <div class="flex items-center gap-2 sm:gap-4">
@@ -320,11 +320,12 @@
                     
                     if (val !== null) {
                         if (drawnNumbers.has(val)) {
-                            // DISEÑO DE MARCA ABSOLUTAMENTE VISIBLE: Usa un contenedor relative y coloca la bolita de fondo.
+                            // DISEÑO DE MARCA A PRUEBA DE FALLOS: Se dibuja la bolita usando Flexbox básico (100% visible siempre)
                             cellHTML = `
-                            <div class="relative w-full h-full flex items-center justify-center font-bold">
-                                <div class="absolute inset-[15%] rounded-full ${theme.markBg} shadow-sm marked-number"></div>
-                                <span class="relative z-10 ${theme.markText}">${val}</span>
+                            <div class="w-full h-full p-[3px] sm:p-[4px]">
+                                <div class="w-full h-full rounded-full ${theme.markBg} flex items-center justify-center shadow-md marked-number border border-white/40">
+                                    <span class="${theme.markText} font-black drop-shadow-sm">${val}</span>
+                                </div>
                             </div>`;
                         } else {
                             // Número NO sorteado
@@ -499,6 +500,16 @@
                     const extracted = extractBingoNumbers(data, docSnap.id);
                     extracted.forEach(num => drawnNumbers.add(num));
                 });
+
+                // Actualizar el texto de estado para que el jugador sepa si los números están llegando de la BD
+                const statusText = document.getElementById('drawn-count-text');
+                if (statusText) {
+                    if (drawnNumbers.size > 0) {
+                        statusText.innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números cantados recibidos.`;
+                    } else {
+                        statusText.innerText = "Esperando a que inicie el sorteo...";
+                    }
+                }
 
                 // Re-dibujar los cartones si todo ya cargó
                 if (accountsLoaded && ticketsLoaded) {
