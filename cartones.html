@@ -33,7 +33,7 @@
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         @keyframes popIn {
-            0% { transform: scale(0.3); opacity: 0; }
+            0% { transform: scale(0); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
     </style>
@@ -317,8 +317,12 @@
                     
                     if (val !== null) {
                         if (drawnNumbers.has(val)) {
-                            // El número ha sido sorteado: lo marcamos como un círculo adentro de la celda
-                            cellHTML = `<div class="w-[85%] h-[85%] flex items-center justify-center ${theme.markBg} ${theme.markText} font-bold marked-number rounded-full shadow-sm">${val}</div>`;
+                            // El número ha sido sorteado: diseño de marca infalible
+                            cellHTML = `
+                            <div class="relative w-full h-full flex items-center justify-center font-bold ${theme.markText}">
+                                <div class="absolute inset-[10%] rounded-full ${theme.markBg} shadow-sm marked-number"></div>
+                                <span class="relative z-10">${val}</span>
+                            </div>`;
                         } else {
                             // El número NO ha sido sorteado: estilo normal
                             cellHTML = `<div class="w-full h-full flex items-center justify-center bg-white font-bold ${theme.text}">${val}</div>`;
@@ -452,25 +456,31 @@
                 checkAndRender();
             });
 
-            // Escuchamos los números sorteados (NOVEDAD CONVERSIÓN A ENTEROS)
+            // Escuchamos los números sorteados (ANALIZADOR INTELIGENTE TODOTERRENO)
             onSnapshot(numbersCollectionRef, (snapshot) => {
                 drawnNumbers.clear();
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     
-                    // Verificamos si el admin guarda el número como un campo "number"
-                    // O si usa el ID del documento en firebase para el número (ej. doc ID "15")
-                    let numeroExtraido = data.number;
-                    if (numeroExtraido === undefined || numeroExtraido === null) {
-                        numeroExtraido = docSnap.id;
-                    }
+                    // CASO 1: Si el admin guarda arrays de números en un documento
+                    ['numeros', 'numbers', 'drawnNumbers', 'sorteados'].forEach(key => {
+                        if (Array.isArray(data[key])) {
+                            data[key].forEach(n => drawnNumbers.add(parseInt(n, 10)));
+                        }
+                    });
 
-                    // Convertimos siempre de texto a número entero matemáticamente
-                    const numeroEntero = parseInt(numeroExtraido, 10);
+                    // CASO 2: Si el admin guarda un documento por cada número
+                    let numeroExtraido = data.number ?? data.numero ?? data.num ?? data.valor ?? data.value;
                     
-                    // Si es un número válido, lo agregamos al conjunto
-                    if (!isNaN(numeroEntero)) {
-                        drawnNumbers.add(numeroEntero);
+                    if (numeroExtraido !== undefined && numeroExtraido !== null) {
+                        // Lo guardó como un campo dentro del documento
+                        drawnNumbers.add(parseInt(numeroExtraido, 10));
+                    } else {
+                        // Lo guardó usando el ID del documento en firebase (ej. doc ID "15")
+                        const numDesdeId = parseInt(docSnap.id, 10);
+                        if (!isNaN(numDesdeId)) {
+                            drawnNumbers.add(numDesdeId);
+                        }
                     }
                 });
 
