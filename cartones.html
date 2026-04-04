@@ -32,14 +32,14 @@
             animation: popIn 0.3s ease-out forwards;
         }
         @keyframes popIn {
-            0% { transform: scale(0.5); }
-            100% { transform: scale(1); }
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body class="min-h-screen bg-[#FDFBF7] text-slate-800 selection:bg-indigo-200 flex flex-col relative">
     
-    <!-- SAFELIST PARA TAILWIND (Añadidos colores pastel para las etiquetas elegantes) -->
+    <!-- SAFELIST PARA TAILWIND -->
     <div class="hidden bg-green-500 bg-rose-500 bg-blue-600 bg-amber-500 bg-slate-500 text-white text-green-600 text-rose-600 text-blue-700 text-amber-600 text-slate-400 border-green-500 border-rose-600 border-blue-600 border-amber-500 border-slate-300 border-green-400 border-rose-500 border-blue-500 border-amber-400 border-slate-200 bg-green-200/50 bg-rose-200/50 bg-blue-200/50 bg-amber-100/60 bg-slate-100/60 bg-green-50 bg-rose-50 bg-blue-50 bg-amber-50 bg-slate-50"></div>
 
     <!-- PANTALLA DE CARGA INICIAL -->
@@ -75,7 +75,7 @@
         </div>
     </div>
 
-    <!-- VISTA PRINCIPAL (Aumentado max-w de 1400px a 1600px para aprovechar pantallas grandes) -->
+    <!-- VISTA PRINCIPAL -->
     <div id="dashboard-view" class="hidden p-2 sm:p-4 md:p-6 transition-opacity duration-300 opacity-0 w-full max-w-[1600px] mx-auto flex-col h-[100dvh]">
         <main class="flex-1 overflow-hidden flex flex-col gap-4 sm:gap-6 min-h-0">
             
@@ -95,7 +95,6 @@
                     </div>
                 </div>
                 <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 sm:pr-2 pb-4 sm:pb-8">
-                    <!-- Reducidas las columnas en pantallas grandes (lg y xl) para que los cartones se vean más amplios -->
                     <div id="tickets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:p-2"></div>
                 </div>
             </div>
@@ -124,7 +123,6 @@
                     </div>
                 </div>
                 
-                <!-- Reducidas las columnas en pantallas grandes (lg y xl) para que los cartones se vean más amplios -->
                 <div id="my-rendered-tickets" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:p-2 content-start pr-1 sm:pr-2 pb-4 sm:pb-8">
                     <!-- Los cartones se inyectan aquí -->
                 </div>
@@ -195,7 +193,6 @@
         let accountsLoaded = false;
         let ticketsLoaded = false;
 
-        // Nuevas variables para el motor en tiempo real
         let currentFirebaseState = null;
         let playerRenderInterval = null;
         let lastDrawnSize = -1;
@@ -282,15 +279,12 @@
                 opacity = 'opacity-60 grayscale-[50%]';
                 overlay = `<div class="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/50 backdrop-blur-[1.5px] rounded-2xl"><span class="bg-slate-800/90 text-white text-[10px] sm:text-xs font-bold px-4 py-1.5 rounded-full shadow-xl uppercase tracking-widest border border-slate-600">Ocupado</span></div>`;
             } else if (state === 'owned') {
-                // Etiqueta "Tuyo" con diseño premium, flotando más arriba
                 overlay = `<div class="absolute -top-3.5 sm:-top-4 left-1/2 transform -translate-x-1/2 z-20"><span class="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-[9px] sm:text-[11px] font-bold px-5 py-1 rounded-full shadow-lg border border-indigo-400/50 uppercase tracking-widest animate-bounce">Tuyo</span></div>`;
             }
 
-            // Fuentes más grandes y prominentes para pantallas grandes
             const textSize = isModal ? 'text-sm sm:text-lg md:text-2xl lg:text-4xl' : 'text-xs sm:text-sm md:text-lg lg:text-xl xl:text-2xl';
             const modalConstraint = isModal ? 'max-w-xl mx-auto' : '';
 
-            // Estilos del contenedor del cartón con sombras profundas y esquinas más suaves
             let html = `
             <div class="relative mt-4 w-full ${modalConstraint} ${cursor} ${opacity} transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-white rounded-2xl shadow-lg p-2 sm:p-3 md:p-4 lg:p-5 border border-slate-200/60 select-none">
                 ${overlay}
@@ -307,30 +301,27 @@
                 for (let c = 0; c < 9; c++) {
                     const val = dataMatrix[r][c];
                     
-                    let cellHTML = '';
+                    let cellClasses = `aspect-square flex items-center justify-center border-r-2 border-b-2 ${theme.borderInner} ${textSize} relative overflow-hidden`;
+                    let innerHTML = '';
                     
                     if (val !== null) {
                         if (drawnNumbers.has(val)) {
                             const animClass = (val === latestDrawnNumber) ? 'marked-number' : '';
-                            // Bolitas más elegantes con bordes y sombras internas
-                            cellHTML = `
-                            <div class="w-full h-full p-[3px] sm:p-1.5 lg:p-2">
-                                <div class="w-full h-full rounded-full ${theme.markBg} flex items-center justify-center shadow-[inset_0_0_12px_rgba(0,0,0,0.25)] ${animClass} border-[1.5px] border-white/90">
-                                    <span class="${theme.markText} font-black drop-shadow-md">${val}</span>
-                                </div>
-                            </div>`;
+                            // SOLUCIÓN A PRUEBA DE FALLOS: Se separa el texto del fondo, forzando la perfecta alineación al centro.
+                            cellClasses += ` bg-white`;
+                            innerHTML = `
+                            <div class="absolute inset-[12%] rounded-full ${theme.markBg} shadow-sm ${animClass} border border-white/50"></div>
+                            <span class="relative z-10 ${theme.markText} font-black drop-shadow-md">${val}</span>
+                            `;
                         } else {
-                            // Números normales con tipografía extra bold
-                            cellHTML = `<div class="w-full h-full flex items-center justify-center bg-white font-black ${theme.text}">${val}</div>`;
+                            cellClasses += ` bg-white`;
+                            innerHTML = `<span class="${theme.text} font-black">${val}</span>`;
                         }
                     } else {
-                        // Celdas vacías con sutil sombra interior para dar profundidad
-                        cellHTML = `<div class="w-full h-full ${theme.emptyBg} shadow-[inset_0_0_5px_rgba(0,0,0,0.05)]"></div>`;
+                        cellClasses += ` ${theme.emptyBg} shadow-[inset_0_0_8px_rgba(0,0,0,0.03)]`;
                     }
 
-                    html += `<div class="aspect-square flex items-center justify-center border-r-2 border-b-2 ${theme.borderInner} ${textSize} overflow-hidden bg-white">
-                                ${cellHTML}
-                             </div>`;
+                    html += `<div class="${cellClasses}">${innerHTML}</div>`;
                 }
                 html += `</div>`;
             }
@@ -417,7 +408,6 @@
             }
         }
 
-        // --- FUNCIONES DEL MOTOR MATEMÁTICO EN TIEMPO REAL (Mismo que usa el Admin) ---
         function computeDerivedState(baseCalled, baseDeck, baseCurrent, startTime, intervalMs) {
             if (!startTime) return { calledNumbers: baseCalled, deck: baseDeck };
 
@@ -448,7 +438,6 @@
             latestDrawnNumber = null;
             
             if (data.calledNumbers && Array.isArray(data.calledNumbers)) {
-                // El número más reciente siempre está en la posición [0] del arreglo
                 if (data.calledNumbers.length > 0) {
                     latestDrawnNumber = parseInt(data.calledNumbers[0], 10);
                 }
@@ -462,7 +451,6 @@
                 setDebugMessage(`OK: Sorteo vacío o reiniciado.`);
             }
 
-            // Para no congelar el celular, SOLO repintamos si salió un número nuevo
             if (drawnNumbers.size !== lastDrawnSize) {
                 lastDrawnSize = drawnNumbers.size;
                 
@@ -498,7 +486,6 @@
                 processDerivedState(currentFirebaseState);
             }
         }
-        // ------------------------------------------------------------------------------
 
         function setDebugMessage(msg, isError = false) {
             const dbg = document.getElementById('debug-state');
@@ -538,17 +525,14 @@
                 checkAndRender();
             });
 
-            // ESCUCHADOR INTELIGENTE (Detecta si es Automático o Manual)
             onSnapshot(gameDocRef, (docSnap) => {
                 try {
                     if (docSnap.exists()) {
                         currentFirebaseState = docSnap.data();
                         
-                        // Si está en automático, arranca el motor local a calcular los números por segundo
                         if (currentFirebaseState.isAutoMode || currentFirebaseState.isDrawing) {
                             if (!playerRenderInterval) playerRenderInterval = setInterval(playerRenderLoop, 100);
                         } else {
-                            // Si lo pausaron o están en manual, apaga el motor y lee normal
                             if (playerRenderInterval) { clearInterval(playerRenderInterval); playerRenderInterval = null; }
                             processDerivedState(currentFirebaseState);
                         }
@@ -561,9 +545,7 @@
                     setDebugMessage("Error procesando datos del sorteo", true);
                 }
             }, (error) => {
-                // ESTO ES CLAVE: Si Firebase rechaza la lectura (permisos, desconexión), se mostrará aquí.
                 console.error("Error crítico de Firebase:", error);
-                
                 const statusText = document.getElementById('drawn-count-text');
                 if (statusText) {
                     statusText.innerHTML = `<span class="text-rose-600 font-bold">Sin conexión: ${error.message}</span>`;
