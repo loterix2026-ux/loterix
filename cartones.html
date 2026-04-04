@@ -28,19 +28,19 @@
             border-radius: 4px;
         }
         
-        /* Animación corregida: Ya no usa opacity:0 para evitar que se quede invisible por error */
+        /* Animación ultra segura */
         .marked-number {
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: popIn 0.3s ease-out forwards;
         }
         @keyframes popIn {
-            0% { transform: scale(0.3); }
+            0% { transform: scale(0.5); }
             100% { transform: scale(1); }
         }
     </style>
 </head>
 <body class="min-h-screen bg-[#FDFBF7] text-slate-800 selection:bg-indigo-200 flex flex-col">
     
-    <!-- SAFELIST PARA TAILWIND: Fuerza al navegador a descargar los colores de las marcas, evitando círculos transparentes -->
+    <!-- SAFELIST PARA TAILWIND -->
     <div class="hidden bg-green-500 bg-rose-500 bg-blue-600 bg-amber-500 bg-slate-500 text-white text-green-600 text-rose-600 text-blue-700 text-amber-600 text-slate-400 border-green-500 border-rose-600 border-blue-600 border-amber-500 border-slate-300 border-green-400 border-rose-500 border-blue-500 border-amber-400 border-slate-200 bg-green-200/50 bg-rose-200/50 bg-blue-200/50 bg-amber-100/60 bg-slate-100/60"></div>
 
     <!-- PANTALLA DE CARGA INICIAL -->
@@ -76,58 +76,53 @@
         </div>
     </div>
 
-    <!-- VISTA PRINCIPAL (Dashboard del Jugador Minimalista) -->
+    <!-- VISTA PRINCIPAL -->
     <div id="dashboard-view" class="hidden p-2 sm:p-4 md:p-6 transition-opacity duration-300 opacity-0 w-full max-w-[1400px] mx-auto flex-col h-[100dvh]">
-        
-        <!-- Contenedor Principal Dividido -->
         <main class="flex-1 overflow-hidden flex flex-col gap-4 sm:gap-6 min-h-0">
             
-            <!-- SECCIÓN 1: Selección de Cartones Detallados (Visible si hay créditos) -->
+            <!-- SECCIÓN 1: Selección de Cartones -->
             <div id="selection-section" class="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-3 sm:p-4 md:p-6 flex-1 overflow-hidden flex flex-col">
                 <div class="flex justify-between items-center mb-4 sm:mb-6 shrink-0 gap-2">
                     <h2 class="text-base sm:text-lg md:text-xl font-serif text-slate-900">Selección de Cartones</h2>
                     
                     <div class="flex items-center gap-2 sm:gap-4">
-                        <!-- Indicador Elegante de Créditos -->
                         <div class="flex items-center bg-indigo-50 border border-indigo-100 rounded-full pl-3 pr-1 py-1 shadow-sm shrink-0">
                             <span class="text-[9px] sm:text-[10px] font-bold text-indigo-800 uppercase tracking-widest mr-2 hidden sm:inline">Créditos</span>
                             <div class="bg-indigo-600 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shadow-inner transition-colors duration-300" id="stat-available-1">0</div>
                         </div>
-                        
-                        <!-- Botón para cerrar sesión -->
                         <button class="logout-btn p-1.5 sm:p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-full transition-colors" title="Cerrar Sesión">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         </button>
                     </div>
                 </div>
-
-                <!-- Scroll Area Grid de Cartones Completos -->
                 <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 sm:pr-2 pb-4 sm:pb-8">
-                    <div id="tickets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-                        <!-- Los 150 cartones se inyectan aquí -->
-                    </div>
+                    <div id="tickets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6"></div>
                 </div>
             </div>
 
-            <!-- SECCIÓN 2: Mis Cartones (Visible solo al agotar créditos) -->
+            <!-- SECCIÓN 2: Mis Cartones -->
             <div id="my-cards-section" class="bg-white rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-4 sm:p-6 md:p-8 flex-1 overflow-hidden flex-col hidden min-h-0">
                 <div class="flex justify-between items-center mb-6 sm:mb-8 shrink-0 border-b border-slate-100 pb-4 sm:pb-5 gap-3">
                     <div class="flex flex-col">
-                        <h2 class="text-xl sm:text-2xl md:text-3xl font-serif text-slate-900 flex items-center gap-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                            Tus Cartones
-                        </h2>
-                        <span class="text-xs text-slate-500 mt-1" id="drawn-count-text">Esperando a que inicie el sorteo...</span>
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-xl sm:text-2xl md:text-3xl font-serif text-slate-900 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Tus Cartones
+                            </h2>
+                            <!-- BOTÓN DE PRUEBA DE DIAGNÓSTICO -->
+                            <button id="btn-test-mark" class="ml-2 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-bold py-1 px-3 rounded-full transition-colors border border-blue-200 shadow-sm flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Simular Marca
+                            </button>
+                        </div>
+                        <span class="text-xs text-slate-500 mt-1" id="drawn-count-text">Buscando números cantados en la base de datos...</span>
                     </div>
                     
                     <div class="flex items-center gap-2 sm:gap-4">
-                        <!-- Indicador Elegante de Créditos (En 0) -->
                         <div class="flex items-center bg-emerald-50 border border-emerald-100 rounded-full pl-3 pr-1 py-1 shadow-sm shrink-0">
                             <span class="text-[9px] sm:text-[10px] font-bold text-emerald-800 uppercase tracking-widest mr-2 hidden sm:inline">Créditos</span>
                             <div class="bg-emerald-500 text-white w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shadow-inner transition-colors duration-300" id="stat-available-2">0</div>
                         </div>
-
-                        <!-- Botón para cerrar sesión -->
                         <button class="logout-btn p-1.5 sm:p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-full transition-colors" title="Cerrar Sesión">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                         </button>
@@ -135,7 +130,7 @@
                 </div>
                 
                 <div id="my-rendered-tickets" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6 content-start pr-1 sm:pr-2 pb-4 sm:pb-8">
-                    <!-- Solo los cartones del jugador se inyectan aquí -->
+                    <!-- Los cartones se inyectan aquí -->
                 </div>
             </div>
         </main>
@@ -144,26 +139,20 @@
     <!-- MODAL DE COMPRA -->
     <div id="ticket-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-3 sm:p-4 hidden opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 md:p-8 max-w-2xl w-full border border-slate-100 transform scale-95 transition-transform duration-300 flex flex-col items-center max-h-[90vh]" id="ticket-modal-content">
-            
             <div class="w-full flex justify-between items-center mb-4 sm:mb-6 shrink-0">
                 <h3 class="text-lg sm:text-xl md:text-2xl font-serif text-slate-900" id="modal-title">Cartón #00</h3>
                 <button id="close-modal-btn" class="text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-200 rounded-full p-1.5 sm:p-2 transition-all">
                     <svg class="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
             </div>
-
             <div class="w-full overflow-y-auto custom-scrollbar flex flex-col items-center">
-                <div id="ticket-preview-container" class="w-full flex justify-center pb-2 sm:pb-4 shrink-0">
-                    <!-- Vista previa del cartón -->
-                </div>
-
+                <div id="ticket-preview-container" class="w-full flex justify-center pb-2 sm:pb-4 shrink-0"></div>
                 <div id="purchase-controls" class="w-full mt-4 sm:mt-6 flex flex-col items-center hidden shrink-0">
                     <button id="confirm-buy-btn" class="w-full max-w-xs bg-indigo-600 hover:bg-indigo-700 text-white py-3 sm:py-3.5 rounded-xl text-sm font-medium transition-all shadow-md flex items-center justify-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
                         Adquirir Cartón
                     </button>
                 </div>
-
                 <div id="ownership-message" class="w-full mt-4 sm:mt-6 text-center hidden shrink-0">
                     <div class="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-slate-100 text-slate-600 font-medium text-xs sm:text-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -171,14 +160,12 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
     <!-- Scripts -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        // Añadimos deleteDoc a las importaciones
         import { getFirestore, doc, setDoc, getDocs, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -197,11 +184,11 @@
 
         const accountsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'accounts');
         const ticketsCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'tickets');
-        const numbersCollectionRef = collection(db, 'artifacts', 'loterix', 'public', 'data', 'drawn_numbers');
 
         let currentUser = null; 
         let allTickets = {}; 
-        let drawnNumbers = new Set(); // Conjunto para guardar los números sorteados
+        let drawnNumbers = new Set();
+        let globalDrawnMemory = { 'drawn_numbers': new Set(), 'numbers': new Set(), 'game': new Set(), 'sorteo': new Set(), 'board': new Set() };
         let selectedTicketId = null;
         let activeAccountIds = new Set();
         let accountsLoaded = false;
@@ -221,16 +208,11 @@
         const ticketModal = document.getElementById('ticket-modal');
         const ticketModalContent = document.getElementById('ticket-modal-content');
 
-        // Cerrar sesión manualmente
         function logoutUser() {
             sessionStorage.removeItem('loterix_player_id');
             window.location.reload();
         }
-
-        // Asignar evento a los botones de cerrar sesión
-        document.querySelectorAll('.logout-btn').forEach(btn => {
-            btn.addEventListener('click', logoutUser);
-        });
+        document.querySelectorAll('.logout-btn').forEach(btn => btn.addEventListener('click', logoutUser));
 
         function mulberry32(a) {
             return function() {
@@ -315,28 +297,25 @@
                 for (let c = 0; c < 9; c++) {
                     const val = dataMatrix[r][c];
                     
-                    // Lógica blindada para marcar el número
                     let cellHTML = '';
                     
                     if (val !== null) {
                         if (drawnNumbers.has(val)) {
-                            // DISEÑO DE MARCA A PRUEBA DE FALLOS: Se dibuja la bolita usando Flexbox básico (100% visible siempre)
+                            // MARCA VISUAL DEFINITIVA (Imposible que se vuelva invisible)
                             cellHTML = `
-                            <div class="w-full h-full p-[3px] sm:p-[4px]">
-                                <div class="w-full h-full rounded-full ${theme.markBg} flex items-center justify-center shadow-md marked-number border border-white/40">
-                                    <span class="${theme.markText} font-black drop-shadow-sm">${val}</span>
-                                </div>
+                            <div class="w-[85%] h-[85%] rounded-full ${theme.markBg} flex items-center justify-center shadow-md marked-number border border-white/60 mx-auto my-auto">
+                                <span class="${theme.markText} font-black drop-shadow-sm">${val}</span>
                             </div>`;
                         } else {
-                            // Número NO sorteado
+                            // Sin marcar
                             cellHTML = `<div class="w-full h-full flex items-center justify-center bg-white font-bold ${theme.text}">${val}</div>`;
                         }
                     } else {
-                        // Celda vacía
+                        // Vacío
                         cellHTML = `<div class="w-full h-full ${theme.emptyBg}"></div>`;
                     }
 
-                    html += `<div class="aspect-square flex items-center justify-center border-r border-b ${theme.borderInner} ${textSize}">
+                    html += `<div class="aspect-square flex items-center justify-center border-r border-b ${theme.borderInner} ${textSize} overflow-hidden">
                                 ${cellHTML}
                              </div>`;
                 }
@@ -425,16 +404,11 @@
             }
         }
 
-        // FUNCIÓN ESCÁNER EXTREMO DE NÚMEROS: 
-        // Lee profundamente el documento en busca de cualquier valor que parezca un número de lotería (del 1 al 90)
         function extractBingoNumbers(dataObj, docId) {
             let foundNumbers = [];
-            
-            // 1. Probar si el ID del documento es el número
             const idNum = parseInt(docId, 10);
             if (!isNaN(idNum) && idNum > 0 && idNum <= 90) foundNumbers.push(idNum);
 
-            // 2. Escanear recursivamente todo lo que está dentro del documento
             function scanRecursively(obj) {
                 if (!obj) return;
                 Object.values(obj).forEach(val => {
@@ -454,7 +428,6 @@
                 });
             }
             scanRecursively(dataObj);
-            
             return foundNumbers;
         }
 
@@ -462,7 +435,6 @@
             onSnapshot(accountsCollectionRef, (snapshot) => {
                 activeAccountIds.clear();
                 let myAccountFound = false;
-                
                 snapshot.forEach(docSnap => {
                     activeAccountIds.add(docSnap.id);
                     if (docSnap.id === currentUser.id) {
@@ -470,13 +442,11 @@
                         currentUser.credits = docSnap.data().credits || 0;
                     }
                 });
-
                 if (!myAccountFound) {
                     sessionStorage.removeItem('loterix_player_id');
                     window.location.reload();
                     return;
                 }
-
                 accountsLoaded = true;
                 checkAndRender();
             });
@@ -490,36 +460,77 @@
                 checkAndRender();
             });
 
-            // ESCUCHADOR DE NÚMEROS REFORZADO CON EL ESCÁNER EXTREMO
-            onSnapshot(numbersCollectionRef, (snapshot) => {
-                drawnNumbers.clear();
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
+            // SÚPER RADAR: Escucha en 5 lugares comunes donde el Admin podría estar guardando los números
+            const possibleCollections = ['drawn_numbers', 'numbers', 'game', 'sorteo', 'board'];
+            
+            possibleCollections.forEach(colName => {
+                onSnapshot(collection(db, 'artifacts', 'loterix', 'public', 'data', colName), (snapshot) => {
+                    globalDrawnMemory[colName].clear();
                     
-                    // Extraer todos los números usando la función infalible
-                    const extracted = extractBingoNumbers(data, docSnap.id);
-                    extracted.forEach(num => drawnNumbers.add(num));
-                });
+                    snapshot.forEach(docSnap => {
+                        const data = docSnap.data();
+                        extractBingoNumbers(data, docSnap.id).forEach(num => globalDrawnMemory[colName].add(num));
+                    });
 
-                // Actualizar el texto de estado para que el jugador sepa si los números están llegando de la BD
-                const statusText = document.getElementById('drawn-count-text');
-                if (statusText) {
-                    if (drawnNumbers.size > 0) {
-                        statusText.innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números cantados recibidos.`;
-                    } else {
-                        statusText.innerText = "Esperando a que inicie el sorteo...";
+                    // Consolidar todos los números encontrados en el Radar
+                    drawnNumbers.clear();
+                    Object.values(globalDrawnMemory).forEach(set => {
+                        set.forEach(num => drawnNumbers.add(num));
+                    });
+
+                    // Actualizar el estado visual
+                    const statusText = document.getElementById('drawn-count-text');
+                    if (statusText) {
+                        if (drawnNumbers.size > 0) {
+                            statusText.innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números cantados recibidos.`;
+                        } else {
+                            statusText.innerText = "Escuchando base de datos. Ningún número detectado aún...";
+                        }
                     }
-                }
 
-                // Re-dibujar los cartones si todo ya cargó
-                if (accountsLoaded && ticketsLoaded) {
-                    renderGrid();
-                }
+                    if (accountsLoaded && ticketsLoaded) renderGrid();
+                });
             });
         }
 
+        // BOTÓN DE SIMULACIÓN PARA PROBAR SI EL DISEÑO FUNCIONA
+        document.getElementById('btn-test-mark').addEventListener('click', () => {
+            if (myTicketsCount === 0) {
+                showToast("Primero debes comprar al menos un cartón para probar.", true);
+                return;
+            }
+            
+            // Buscar un número al azar en mis cartones para marcarlo
+            let numeroPrueba = null;
+            for (let i = 1; i <= 150; i++) {
+                if (allTickets[i.toString()] && allTickets[i.toString()].ownerId === currentUser.id) {
+                    const matrix = generateTicketData(i);
+                    for (let r = 0; r < 3; r++) {
+                        for (let c = 0; c < 9; c++) {
+                            if (matrix[r][c] !== null && !drawnNumbers.has(matrix[r][c])) {
+                                numeroPrueba = matrix[r][c];
+                                break;
+                            }
+                        }
+                        if (numeroPrueba) break;
+                    }
+                }
+                if (numeroPrueba) break;
+            }
+
+            if (numeroPrueba) {
+                drawnNumbers.add(numeroPrueba);
+                renderGrid();
+                showToast(`¡Número ${numeroPrueba} marcado en modo prueba! Si lo ves, el diseño funciona.`);
+            } else {
+                showToast("Todos los números de tus cartones ya están marcados.", true);
+            }
+        });
+
+        let myTicketsCount = 0; // Global para poder usarlo en el test
+
         function updateStats() {
-            let myTicketsCount = 0;
+            myTicketsCount = 0;
             for (let i = 1; i <= 150; i++) {
                 if (allTickets[i.toString()] && allTickets[i.toString()].ownerId === currentUser.id) myTicketsCount++;
             }
@@ -544,7 +555,6 @@
             grid.innerHTML = '';
             myTicketsContainer.innerHTML = '';
             
-            let myTicketsCount = 0;
             let myTicketsHtml = '';
 
             for (let i = 1; i <= 150; i++) {
@@ -557,13 +567,12 @@
                 if (ticketInfo) {
                     if (ticketInfo.ownerId === currentUser.id) {
                         state = 'owned';
-                        myTicketsCount++;
                         myTicketsHtml += renderTicketHTML(i, matrix, baseColor, 'owned', false);
                     } else if (activeAccountIds.has(ticketInfo.ownerId)) {
                         state = 'occupied';
                     } else {
                         state = 'free';
-                        deleteDoc(doc(db, 'artifacts', 'loterix', 'public', 'data', 'tickets', idStr)).catch(e => console.error("Error limpiando cartón:", e));
+                        deleteDoc(doc(db, 'artifacts', 'loterix', 'public', 'data', 'tickets', idStr)).catch(e => console.error(e));
                     }
                 }
                 
@@ -618,22 +627,13 @@
         document.getElementById('close-modal-btn').onclick = closeTicketModal;
         document.getElementById('confirm-buy-btn').onclick = async () => {
             if (!selectedTicketId) return;
-            
-            let myTicketsCount = 0;
-            for (let i = 1; i <= 150; i++) { 
-                if (allTickets[i.toString()] && allTickets[i.toString()].ownerId === currentUser.id) myTicketsCount++; 
-            }
-            
             if (myTicketsCount >= currentUser.credits) { 
                 showToast("Ya no tienes más créditos disponibles.", true); 
-                closeTicketModal();
-                return; 
+                closeTicketModal(); return; 
             }
-            
             if (allTickets[selectedTicketId.toString()]) { 
-                showToast("¡Lo sentimos! Otro jugador se adelantó y compró este cartón.", true); 
-                closeTicketModal();
-                return; 
+                showToast("¡Lo sentimos! Otro jugador compró este cartón.", true); 
+                closeTicketModal(); return; 
             }
             
             const btn = document.getElementById('confirm-buy-btn');
@@ -643,20 +643,14 @@
 
             try {
                 await setDoc(doc(ticketsCollectionRef, selectedTicketId.toString()), { 
-                    ownerId: currentUser.id, 
-                    ownerName: currentUser.username, 
-                    color: getTicketColor(selectedTicketId), 
-                    timestamp: Date.now() 
+                    ownerId: currentUser.id, ownerName: currentUser.username, color: getTicketColor(selectedTicketId), timestamp: Date.now() 
                 });
-                
                 showToast("¡Cartón adquirido con éxito!"); 
                 closeTicketModal();
             } catch (err) { 
-                console.error(err); 
-                showToast("Error al guardar el cartón.", true); 
+                console.error(err); showToast("Error al guardar.", true); 
             } finally {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
+                btn.innerHTML = originalHtml; btn.disabled = false;
             }
         };
         initApp();
