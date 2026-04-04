@@ -535,11 +535,25 @@
 
         function checkWinners(currentCalled) {
             let found = [];
-            if (currentCalled.length < 15) return found; 
+            // Cambiamos el límite de 15 a 5, ya que una fila (línea) se puede ganar con 5 bolas
+            if (currentCalled.length < 5) return found; 
             
             for (const [ticketId, ticketData] of Object.entries(playingTickets)) {
-                const nums = getTicketNumbers(parseInt(ticketId));
-                const isWinner = nums.every(n => currentCalled.includes(n));
+                const matrix = generateTicketData(parseInt(ticketId));
+                let isWinner = false;
+                
+                // Revisamos fila por fila (0, 1 y 2) para ver si alguna está completa
+                for (let r = 0; r < 3; r++) {
+                    // Filtramos los espacios vacíos para obtener solo los 5 números de la fila
+                    const rowNumbers = matrix[r].filter(n => n !== null);
+                    
+                    // Si los 5 números de esta fila han sido cantados, ¡es ganador!
+                    if (rowNumbers.length === 5 && rowNumbers.every(n => currentCalled.includes(n))) {
+                        isWinner = true;
+                        break;
+                    }
+                }
+
                 if (isWinner) {
                     found.push({ ticketId, ...ticketData });
                     break; 
