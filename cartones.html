@@ -28,18 +28,21 @@
             border-radius: 4px;
         }
         
-        /* Animación para números marcados */
+        /* Animación corregida: Ya no usa opacity:0 para evitar que se quede invisible por error */
         .marked-number {
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes popIn {
-            0% { transform: scale(0); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+            0% { transform: scale(0.3); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
 <body class="min-h-screen bg-[#FDFBF7] text-slate-800 selection:bg-indigo-200 flex flex-col">
     
+    <!-- SAFELIST PARA TAILWIND: Fuerza al navegador a descargar los colores de las marcas, evitando círculos transparentes -->
+    <div class="hidden bg-green-500 bg-rose-500 bg-blue-600 bg-amber-500 bg-slate-500 text-white text-green-600 text-rose-600 text-blue-700 text-amber-600 text-slate-400 border-green-500 border-rose-600 border-blue-600 border-amber-500 border-slate-300 border-green-400 border-rose-500 border-blue-500 border-amber-400 border-slate-200 bg-green-200/50 bg-rose-200/50 bg-blue-200/50 bg-amber-100/60 bg-slate-100/60"></div>
+
     <!-- PANTALLA DE CARGA INICIAL -->
     <div id="loading-overlay" class="fixed inset-0 bg-[#FDFBF7] z-[300] flex flex-col items-center justify-center transition-opacity duration-500">
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 animate-pulse mb-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -312,19 +315,19 @@
                 for (let c = 0; c < 9; c++) {
                     const val = dataMatrix[r][c];
                     
-                    // Lógica para marcar el número si ha sido sorteado
+                    // Lógica blindada para marcar el número
                     let cellHTML = '';
                     
                     if (val !== null) {
                         if (drawnNumbers.has(val)) {
-                            // El número ha sido sorteado: diseño de marca infalible
+                            // DISEÑO DE MARCA ABSOLUTAMENTE VISIBLE: Usa un contenedor relative y coloca la bolita de fondo.
                             cellHTML = `
-                            <div class="relative w-full h-full flex items-center justify-center font-bold ${theme.markText}">
-                                <div class="absolute inset-[10%] rounded-full ${theme.markBg} shadow-sm marked-number"></div>
-                                <span class="relative z-10">${val}</span>
+                            <div class="relative w-full h-full flex items-center justify-center font-bold">
+                                <div class="absolute inset-[15%] rounded-full ${theme.markBg} shadow-sm marked-number"></div>
+                                <span class="relative z-10 ${theme.markText}">${val}</span>
                             </div>`;
                         } else {
-                            // El número NO ha sido sorteado: estilo normal
+                            // Número NO sorteado
                             cellHTML = `<div class="w-full h-full flex items-center justify-center bg-white font-bold ${theme.text}">${val}</div>`;
                         }
                     } else {
@@ -415,15 +418,46 @@
         }
 
         function checkAndRender() {
-            // Solo renderizamos si ambas colecciones (cuentas y cartones) ya cargaron
             if (accountsLoaded && ticketsLoaded) {
                 updateStats();
                 renderGrid();
             }
         }
 
+        // FUNCIÓN ESCÁNER EXTREMO DE NÚMEROS: 
+        // Lee profundamente el documento en busca de cualquier valor que parezca un número de lotería (del 1 al 90)
+        function extractBingoNumbers(dataObj, docId) {
+            let foundNumbers = [];
+            
+            // 1. Probar si el ID del documento es el número
+            const idNum = parseInt(docId, 10);
+            if (!isNaN(idNum) && idNum > 0 && idNum <= 90) foundNumbers.push(idNum);
+
+            // 2. Escanear recursivamente todo lo que está dentro del documento
+            function scanRecursively(obj) {
+                if (!obj) return;
+                Object.values(obj).forEach(val => {
+                    if (Array.isArray(val)) {
+                        val.forEach(v => {
+                            const n = parseInt(v, 10);
+                            if (!isNaN(n) && n > 0 && n <= 90) foundNumbers.push(n);
+                        });
+                    } else if (typeof val === 'number') {
+                        if (val > 0 && val <= 90) foundNumbers.push(val);
+                    } else if (typeof val === 'string') {
+                        const n = parseInt(val, 10);
+                        if (!isNaN(n) && n > 0 && n <= 90) foundNumbers.push(n);
+                    } else if (typeof val === 'object') {
+                        scanRecursively(val);
+                    }
+                });
+            }
+            scanRecursively(dataObj);
+            
+            return foundNumbers;
+        }
+
         async function startDashboard() {
-            // Escuchamos TODAS las cuentas para saber quiénes están activos
             onSnapshot(accountsCollectionRef, (snapshot) => {
                 activeAccountIds.clear();
                 let myAccountFound = false;
@@ -446,7 +480,6 @@
                 checkAndRender();
             });
 
-            // Escuchamos los cartones
             onSnapshot(ticketsCollectionRef, (snapshot) => {
                 allTickets = {};
                 snapshot.forEach(docSnap => {
@@ -456,35 +489,18 @@
                 checkAndRender();
             });
 
-            // Escuchamos los números sorteados (ANALIZADOR INTELIGENTE TODOTERRENO)
+            // ESCUCHADOR DE NÚMEROS REFORZADO CON EL ESCÁNER EXTREMO
             onSnapshot(numbersCollectionRef, (snapshot) => {
                 drawnNumbers.clear();
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     
-                    // CASO 1: Si el admin guarda arrays de números en un documento
-                    ['numeros', 'numbers', 'drawnNumbers', 'sorteados'].forEach(key => {
-                        if (Array.isArray(data[key])) {
-                            data[key].forEach(n => drawnNumbers.add(parseInt(n, 10)));
-                        }
-                    });
-
-                    // CASO 2: Si el admin guarda un documento por cada número
-                    let numeroExtraido = data.number ?? data.numero ?? data.num ?? data.valor ?? data.value;
-                    
-                    if (numeroExtraido !== undefined && numeroExtraido !== null) {
-                        // Lo guardó como un campo dentro del documento
-                        drawnNumbers.add(parseInt(numeroExtraido, 10));
-                    } else {
-                        // Lo guardó usando el ID del documento en firebase (ej. doc ID "15")
-                        const numDesdeId = parseInt(docSnap.id, 10);
-                        if (!isNaN(numDesdeId)) {
-                            drawnNumbers.add(numDesdeId);
-                        }
-                    }
+                    // Extraer todos los números usando la función infalible
+                    const extracted = extractBingoNumbers(data, docSnap.id);
+                    extracted.forEach(num => drawnNumbers.add(num));
                 });
 
-                // Re-renderizamos para actualizar los números marcados en los cartones
+                // Re-dibujar los cartones si todo ya cargó
                 if (accountsLoaded && ticketsLoaded) {
                     renderGrid();
                 }
