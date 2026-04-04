@@ -197,6 +197,11 @@
         let accountsLoaded = false;
         let ticketsLoaded = false;
 
+        // Nuevas variables para el motor en tiempo real
+        let currentFirebaseState = null;
+        let playerRenderInterval = null;
+        let lastDrawnSize = -1;
+
         const colorThemes = {
             green: { text: 'text-green-600', borderOuter: 'border-green-500', borderInner: 'border-green-400', emptyBg: 'bg-green-200/50', markBg: 'bg-green-500', markText: 'text-white' },
             red: { text: 'text-rose-600', borderOuter: 'border-rose-600', borderInner: 'border-rose-500', emptyBg: 'bg-rose-200/50', markBg: 'bg-rose-500', markText: 'text-white' },
@@ -409,6 +414,83 @@
             }
         }
 
+        // --- FUNCIONES DEL MOTOR MATEMÁTICO EN TIEMPO REAL (Mismo que usa el Admin) ---
+        function computeDerivedState(baseCalled, baseDeck, baseCurrent, startTime, intervalMs) {
+            if (!startTime) return { calledNumbers: baseCalled, deck: baseDeck };
+
+            let elapsed = Date.now() - startTime;
+            let cycle = Math.floor(elapsed / intervalMs);
+            let phase = elapsed % intervalMs;
+
+            let dynamicMixingMs = Math.min(1500, intervalMs / 2);
+            let completedDraws = cycle + (phase >= dynamicMixingMs ? 1 : 0);
+            completedDraws = Math.min(completedDraws, (baseDeck || []).length);
+
+            let computedCalled = [...(baseCalled || [])];
+            let computedDeck = [...(baseDeck || [])];
+
+            for (let i = 0; i < completedDraws; i++) {
+                if (computedDeck.length > 0) {
+                    let num = computedDeck.pop();
+                    computedCalled.unshift(num);
+                }
+            }
+
+            return { calledNumbers: computedCalled };
+        }
+
+        function processDerivedState(data) {
+            if (!data) return;
+            drawnNumbers.clear();
+            
+            if (data.calledNumbers && Array.isArray(data.calledNumbers)) {
+                data.calledNumbers.forEach(num => {
+                    const parsed = parseInt(num, 10);
+                    if(!isNaN(parsed)) drawnNumbers.add(parsed);
+                });
+                setDebugMessage(`OK: ${drawnNumbers.size} números (Sincronizado)`);
+            } else {
+                setDebugMessage(`OK: Sorteo vacío o reiniciado.`);
+            }
+
+            // Para no congelar el celular, SOLO repintamos si salió un número nuevo
+            if (drawnNumbers.size !== lastDrawnSize) {
+                lastDrawnSize = drawnNumbers.size;
+                
+                const statusText = document.getElementById('drawn-count-text');
+                if (statusText) {
+                    if (drawnNumbers.size > 0) {
+                        statusText.innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números cantados recibidos.`;
+                    } else {
+                        statusText.innerText = "Sincronizado. Esperando a que el administrador saque bolas...";
+                    }
+                }
+
+                if (accountsLoaded && ticketsLoaded) renderGrid();
+            }
+        }
+
+        function playerRenderLoop() {
+            if (!currentFirebaseState) return;
+            if (currentFirebaseState.isAutoMode) {
+                const intervalToUse = currentFirebaseState.autoIntervalMs || 3000;
+                const derived = computeDerivedState(
+                    currentFirebaseState.calledNumbers, 
+                    currentFirebaseState.deck, 
+                    currentFirebaseState.currentNumber, 
+                    currentFirebaseState.autoStartTime, 
+                    intervalToUse
+                );
+                processDerivedState({
+                    ...currentFirebaseState,
+                    calledNumbers: derived.calledNumbers
+                });
+            } else {
+                processDerivedState(currentFirebaseState);
+            }
+        }
+        // ------------------------------------------------------------------------------
+
         function setDebugMessage(msg, isError = false) {
             const dbg = document.getElementById('debug-state');
             if(dbg) {
@@ -447,42 +529,24 @@
                 checkAndRender();
             });
 
-            // ESCUCHADOR DIRECTO Y EXACTO AL ADMINISTRADOR (BLINDADO)
+            // ESCUCHADOR INTELIGENTE (Detecta si es Automático o Manual)
             onSnapshot(gameDocRef, (docSnap) => {
                 try {
-                    drawnNumbers.clear();
-                    
                     if (docSnap.exists()) {
-                        const data = docSnap.data();
+                        currentFirebaseState = docSnap.data();
                         
-                        if (data.calledNumbers && Array.isArray(data.calledNumbers)) {
-                            // Usamos parseInt estricto por si Firebase lo guardó como texto sin querer
-                            data.calledNumbers.forEach(num => {
-                                const parsed = parseInt(num, 10);
-                                if(!isNaN(parsed)) drawnNumbers.add(parsed);
-                            });
-                            
-                            setDebugMessage(`OK: Leyendo ${drawnNumbers.size} números.`);
+                        // Si está en automático, arranca el motor local a calcular los números por segundo
+                        if (currentFirebaseState.isAutoMode || currentFirebaseState.isDrawing) {
+                            if (!playerRenderInterval) playerRenderInterval = setInterval(playerRenderLoop, 100);
                         } else {
-                            setDebugMessage(`OK: Sorteo vacío o reiniciado.`);
+                            // Si lo pausaron o están en manual, apaga el motor y lee normal
+                            if (playerRenderInterval) { clearInterval(playerRenderInterval); playerRenderInterval = null; }
+                            processDerivedState(currentFirebaseState);
                         }
                     } else {
                         setDebugMessage(`OK: Aún no se ha creado el sorteo.`);
+                        processDerivedState({ calledNumbers: [] });
                     }
-
-                    // Actualizar el texto debajo del título
-                    const statusText = document.getElementById('drawn-count-text');
-                    if (statusText) {
-                        if (drawnNumbers.size > 0) {
-                            statusText.innerHTML = `<span class="text-emerald-600 font-bold">${drawnNumbers.size}</span> números cantados recibidos.`;
-                        } else {
-                            statusText.innerText = "Sincronizado. Esperando a que el administrador saque bolas...";
-                        }
-                    }
-
-                    // Refrescar los cartones visualmente inmediatamente si ya cargó el resto
-                    if (accountsLoaded && ticketsLoaded) renderGrid();
-
                 } catch(e) {
                     console.error("Error al procesar los números:", e);
                     setDebugMessage("Error procesando datos del sorteo", true);
